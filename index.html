@@ -280,12 +280,7 @@ canvas { display: none; }
       <button class="btn-close" onclick="closeMod('mSettings')"><svg><use href="#ico-close"></use></svg></button>
     </div>
     
-    <div style="background:var(--warning-bg); color:var(--warning); padding:12px 16px; border-radius:12px; font-size:12px; font-weight:600; margin-bottom:20px; border:1px solid rgba(245,158,11,0.2);">
-      🔴 PASTE YOUR WEB APP URL HERE 🔴
-    </div>
-    <div class="fld"><label>Google Apps Script URL</label><input id="sDbUrl" placeholder="https://script.google.com/macros/s/..."></div>
-    
-    <div class="fld" style="margin-top:24px;"><label>Institute Name</label><input id="sName"></div>
+    <div class="fld"><label>Institute Name</label><input id="sName"></div>
     <div class="fld"><label>Location / Tagline</label><input id="sLoc"></div>
     <button class="btn-solid" onclick="saveSettings()">Save Changes</button>
     <button class="btn-outline" onclick="doExport()">Export Data (CSV)</button>
@@ -317,9 +312,11 @@ const MODES=[
   {id:"bank",label:"Bank",icon:"<svg width='16' height='16'><use href='#ico-bank'></use></svg>"},
 ];
 
+// 🔴 HARDCODED APPS SCRIPT URL 🔴
+const DB_URL = "https://script.google.com/macros/s/AKfycbx23q-7hv2ZXazHw0RsTdi9wQQfjArlnVURTFjGEiOasUvFwt1S98TFraFmRmm2xGvj/exec";
+
 let VY=CY, selMode="cash";
 let activePayMonths = [];
-let DB_URL = ""; 
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
 // --- PRELOAD IMAGES ---
@@ -353,7 +350,6 @@ function hideSync() {
 async function load() {
   try { const s = localStorage.getItem("ttc_db_cloud_fy"); if(s) D = JSON.parse(s); } catch(e){}
   
-  DB_URL = localStorage.getItem("ttc_db_url") || "";
   renderAll();
 
   if(DB_URL) {
@@ -883,20 +879,12 @@ function delStu(id) {
 function openSettings() {
   document.getElementById("sName").value = D.cfg.name;
   document.getElementById("sLoc").value = D.cfg.loc;
-  document.getElementById("sDbUrl").value = DB_URL;
   openMod("mSettings");
 }
 
 function saveSettings() {
   D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes";
   D.cfg.loc = document.getElementById("sLoc").value.trim();
-  
-  const newUrl = document.getElementById("sDbUrl").value.trim();
-  
-  if(newUrl !== DB_URL) {
-    DB_URL = newUrl;
-    localStorage.setItem("ttc_db_url", DB_URL);
-  }
   
   save(); closeMod("mSettings"); renderAll();
 }

@@ -240,7 +240,6 @@ canvas { display: none; }
       <div class="fld"><label>WhatsApp No.</label><input id="ePhone" type="tel" placeholder="919876543210"></div>
       <div class="fld"><label>Due Date</label><input id="eDue" type="number" min="1" max="28" placeholder="10"></div>
     </div>
-    <!-- The New Joining Date Engine -->
     <div class="f-row">
       <div class="fld"><label>Join Year</label><select id="eJoinY"></select></div>
       <div class="fld"><label>Join Month</label><select id="eJoinM"></select></div>
@@ -287,16 +286,22 @@ let activePayMonths = [];
 let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
-// --- PRELOAD IMAGES SAFELY (Anti-Taint) ---
+// --- PRELOAD IMAGES SAFELY (The exact flawless engine from index 19) ---
 let IMG_LOGO = null, IMG_QR = null;
-function loadImg(url) {
-  return new Promise(res => { 
-    const img = new Image(); 
-    img.crossOrigin = "anonymous"; 
-    img.onload = () => res(img); 
-    img.onerror = () => res(null); 
-    img.src = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url); 
-  });
+async function loadImg(url) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const objUrl = URL.createObjectURL(blob);
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => res(null);
+      img.src = objUrl;
+    });
+  } catch(e) {
+    return null; // Silent fail keeps canvas clean
+  }
 }
 async function initImages() { IMG_LOGO = await loadImg(LOGO_URL); IMG_QR = await loadImg(QR_URL); }
 initImages();
@@ -337,17 +342,17 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
 
-// JOINING DATE ENGINE: Check if a month is before the student's enrollment
+// JOINING DATE ENGINE
 function isNA(s, y, m) {
-  if (s.joinY === undefined || s.joinM === undefined) return false; // Legacy fallback
+  if (s.joinY === undefined || s.joinM === undefined) return false;
   if (y < s.joinY) return true;
   if (y === s.joinY && m < s.joinM) return true;
   return false;
 }
 
-// CORE MATH ENGINE (Now respects joining date)
+// CORE MATH ENGINE
 function monthDue(s, y, m) {
-  if (isNA(s, y, m)) return 0; // Not enrolled yet = owes nothing
+  if (isNA(s, y, m)) return 0;
   let p = s.payments[pk(y,m)];
   if (!p) return s.fee;
   if (p.amt !== undefined) return Math.max(0, s.fee - p.amt);
@@ -366,7 +371,6 @@ function renderAll() { document.getElementById("hdrLoc").textContent = D.cfg.loc
 function renderStats() {
   let p = 0; D.students.forEach(s => { for(let i=0; i<=11; i++) { let pay = s.payments[pk(CY,i)]; if(pay) p += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0)); }});
   
-  // Total expected per month depends on who is enrolled this month
   let currentExpected = 0;
   D.students.forEach(s => { if(!isNA(s, CY, CM)) currentExpected += s.fee; });
 
@@ -440,7 +444,7 @@ function renderDetailsContent(s) {
   `;
 }
 
-// --- PAYMENT MODAL (WATERFALL/PARTIAL LOGIC) ---
+// --- PAYMENT MODAL (WATERFALL LOGIC) ---
 function openPayment(id, y, m) {
   const s = stu(id); const isFullyPaid = isPaid(s, y, m);
   document.getElementById("pId").value = id;
@@ -466,7 +470,6 @@ function openPayment(id, y, m) {
 
 function renderPayModal(id, y) {
   const s = stu(id); 
-  // Exclude NA months from being targeted
   const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i) && !isNA(s, y, i));
   let maxM = Math.max(...activePayMonths); let totalDue = 0;
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, y, i);
@@ -529,7 +532,7 @@ function savePayLogic(id, y) {
 
 function savePayOnly(id, y) { savePayLogic(id, y); closeMod("mPayment"); }
 
-// CORE ASYNC FUNCTIONS (Required for Share Sheet)
+// ASYNC FUNCTIONS
 async function savePayAndShare(id, y) { 
   const res = savePayLogic(id, y); 
   closeMod("mPayment"); 
@@ -642,15 +645,14 @@ async function shareRecord(id) {
   ctx.fillStyle = "#F8FAFC"; drawRoundRect(ctx, 60, yPos+20, W-120, 120, 16); ctx.fill();
   ctx.textAlign = "left"; ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
   ctx.fillText("TOTAL PAID", 90, yPos+60); ctx.fillText("TOTAL PENDING", W/2, yPos+60);
-  ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString()}`, 90, yPos+100);
-  ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString()}`, W/2, yPos+100);
+  ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString("en-IN")}`, 90, yPos+100);
+  ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString("en-IN")}`, W/2, yPos+100);
 
   const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nAcademic Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
   const fileName = `Statement_${s.name.replace(/ /g,'_')}_${VY}.png`;
 
   try {
     const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
-    if(!blob) throw new Error("Blob failed");
     const file = new File([blob], fileName, { type: "image/png" });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
     else { throw new Error("Fallback"); }

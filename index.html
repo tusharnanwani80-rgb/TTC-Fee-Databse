@@ -132,7 +132,7 @@ input, select { font-family: inherit; }
 .act-btn.st { background: var(--primary-light); color: var(--primary); border-color: rgba(37,99,235,0.2); }
 .act-btn.st svg { color: var(--primary); }
 
-/* FORMS & INPUTS */
+/* FORMS & MODALS */
 .fld { margin-bottom: 16px; }
 .fld label { display: block; font-size: 12px; font-weight: 700; color: var(--text-mut); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .fld input, .fld select { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 15px; font-family: inherit; font-weight: 500; outline: none; color: var(--text-main); background: var(--bg-main); transition: border-color 0.2s; }
@@ -164,7 +164,7 @@ canvas { display: none; }
 <svg style="display:none;">
   <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
   <symbol id="ico-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></symbol>
-  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
+  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
   <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></symbol>
   <symbol id="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></symbol>
   <symbol id="ico-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></symbol>
@@ -256,7 +256,7 @@ canvas { display: none; }
 // --- STATE & DATA (FINANCIAL YEAR = APRIL TO MARCH) ---
 const MN = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
 const NOW = new Date();
-const realM = NOW.getMonth(); // 0-11
+const realM = NOW.getMonth(); 
 const CD = NOW.getDate();
 
 const CY = realM < 3 ? NOW.getFullYear() - 1 : NOW.getFullYear();
@@ -278,7 +278,7 @@ let activePayMonths = [];
 let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
-// --- PRELOAD IMAGES SAFELY (Bypass CORS Tainting) ---
+// --- PRELOAD IMAGES SAFELY (Anti-Taint) ---
 let IMG_LOGO = null, IMG_QR = null;
 function loadImg(url) {
   return new Promise(res => { 
@@ -286,7 +286,7 @@ function loadImg(url) {
     img.crossOrigin = "anonymous"; 
     img.onload = () => res(img); 
     img.onerror = () => res(null); 
-    img.src = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url); 
+    img.src = url; 
   });
 }
 async function initImages() { IMG_LOGO = await loadImg(LOGO_URL); IMG_QR = await loadImg(QR_URL); }
@@ -328,7 +328,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
 
-// Calculate exact due amount for a specific month (Handles Partial)
+// CORE MATH ENGINE 
 function monthDue(s, y, m) {
   let p = s.payments[pk(y,m)];
   if (!p) return s.fee;
@@ -466,7 +466,6 @@ function togglePayMonth(id, y, m) {
 
 function setMode(m, id, y) { selMode = m; renderPayModal(id, y); }
 
-// The Waterfall Logic
 function savePayLogic(id, y) {
   const s = stu(id); const d = document.getElementById("pDate").value; 
   let amtToDistribute = parseInt(document.getElementById("pAmt").value) || 0;
@@ -496,8 +495,19 @@ function savePayLogic(id, y) {
 }
 
 function savePayOnly(id, y) { savePayLogic(id, y); closeMod("mPayment"); }
-async function savePayAndShare(id, y) { const res = savePayLogic(id, y); closeMod("mPayment"); await generateAndShare(id, y, res.months, 'receipt', res.amount); }
-async function resendSingleReceipt(id, y, m, amtSaved) { closeMod("mPayment"); await generateAndShare(id, y, [m], 'receipt', amtSaved); }
+
+// CORE ASYNC FUNCTIONS (Required for Share Sheet)
+async function savePayAndShare(id, y) { 
+  const res = savePayLogic(id, y); 
+  closeMod("mPayment"); 
+  await generateAndShare(id, y, res.months, 'receipt', res.amount); 
+}
+
+async function resendSingleReceipt(id, y, m, amtSaved) { 
+  closeMod("mPayment"); 
+  await generateAndShare(id, y, [m], 'receipt', amtSaved); 
+}
+
 function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); renderAll(); renderDetailsContent(stu(id)); closeMod("mPayment"); }
 
 // --- SMART REMINDER MODAL ---
@@ -564,8 +574,7 @@ async function shareRecord(id) {
   ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
   ctx.fillText("MONTH", 60, 320); ctx.fillText("STATUS / DATE", 300, 320); ctx.textAlign = "right"; ctx.fillText("AMOUNT PAID", W-60, 320);
   
-  let yPos = 370; let tPaid = 0; let tPending = 0;
-  let txtRecord = "";
+  let yPos = 370; let tPaid = 0; let tPending = 0; let txtRecord = "";
   
   for(let i=0; i<12; i++) {
     let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i);
@@ -590,40 +599,28 @@ async function shareRecord(id) {
     ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
     ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     
-    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2);
-    yPos += 55;
+    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2); yPos += 55;
   }
 
   ctx.fillStyle = "#F8FAFC"; drawRoundRect(ctx, 60, yPos+20, W-120, 120, 16); ctx.fill();
   ctx.textAlign = "left"; ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
   ctx.fillText("TOTAL PAID", 90, yPos+60); ctx.fillText("TOTAL PENDING", W/2, yPos+60);
-  ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString()}`, 90, yPos+100);
-  ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString()}`, W/2, yPos+100);
+  ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString("en-IN")}`, 90, yPos+100);
+  ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString("en-IN")}`, W/2, yPos+100);
 
   const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nAcademic Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
-  const fileName = `Statement_${s.name}_${VY}.png`;
+  const fileName = `Statement_${s.name.replace(/ /g,'_')}_${VY}.png`;
 
-  try {
-    const blob = await new Promise(res => cvs.toBlob(res, "image/png"));
-    if(!blob) throw new Error("Blob failed");
-    const file = new File([blob], fileName, { type: "image/png" });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { 
-      await navigator.share({ files: [file], title: fileName, text: textMsg }); 
-    } else { throw new Error("Fallback"); }
-  } catch (err) {
-    console.log("Share failed:", err);
-    try {
-      const dataUrl = cvs.toDataURL("image/png");
-      const a = document.createElement("a"); a.href = dataUrl; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      alert("Image downloaded! WhatsApp will open now.");
-    } catch(e) { 
-      alert("Browser security prevented image generation. Sending text only."); 
-    }
-    setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
-  }
+  await exportCanvas(cvs, fileName, textMsg, s.phone);
 }
 
 // --- WEB SHARE API / CANVAS LOGIC (Receipt/Reminder) ---
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h); ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r); ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
+}
+
 async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   const s = stu(id); const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   const isReceipt = type === 'receipt';
@@ -692,24 +689,26 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
     textMsg += `Total Due: Rs. ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
 
+  await exportCanvas(cvs, fileName, textMsg, s.phone);
+}
+
+// --- BULLETPROOF CANVAS EXPORT ---
+async function exportCanvas(cvs, fileName, textMsg, phone) {
   try {
-    const blob = await new Promise(res => cvs.toBlob(res, "image/png"));
-    if(!blob) throw new Error("Blob failed");
+    const dataUrl = cvs.toDataURL("image/png");
+    const blob = await (await fetch(dataUrl)).blob(); // Bulletproof Blob bypass
     const file = new File([blob], fileName, { type: "image/png" });
-    const shareData = { files: [file], title: fileName, text: textMsg };
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { 
-      await navigator.share(shareData); 
-    } else { throw new Error("Fallback"); }
+    
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { 
+      await navigator.share({ files: [file], title: fileName, text: textMsg }); 
+    } else { throw new Error("Share API not supported"); }
   } catch (err) {
-    console.log("Share failed:", err);
+    console.log("Fallback triggered:", err);
     try {
-      const dataUrl = cvs.toDataURL("image/png");
-      const a = document.createElement("a"); a.href = dataUrl; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      alert("Image downloaded! WhatsApp will open now.");
-    } catch(e) { 
-      alert("Browser security prevented image generation. Sending text only."); 
-    }
-    setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
+      const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      alert("Image downloaded! WhatsApp will open now. Please attach the image manually.");
+    } catch(e) { alert("Sending text only. Ensure browser allows downloads."); }
+    setTimeout(() => { window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
 

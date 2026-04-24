@@ -124,7 +124,7 @@ input, select { font-family: inherit; }
 .m-box.ov:not(.paid):not(.partial) .m-box-i { border-color: var(--danger); }
 
 .sd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.act-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); transition: background 0.2s; }
+.act-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); transition: background 0.2s; cursor: pointer; }
 .act-btn:active { background: var(--bg-main); }
 .act-btn svg { width: 16px; height: 16px; color: var(--text-mut); }
 .act-btn.wa { background: #25D366; color: white; border-color: #25D366; }
@@ -154,10 +154,6 @@ input, select { font-family: inherit; }
 .pm-mode { flex: 1; padding: 12px; text-align: center; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-mut); background: var(--surface); transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
 .pm-mode svg { width: 20px; height: 20px; }
 .pm-mode.on { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
-
-.wa-float { position: fixed; bottom: 24px; right: 24px; background: #25D366; color: white; border-radius: 50px; padding: 16px 24px; font-size: 15px; font-weight: 800; box-shadow: 0 10px 24px rgba(37,211,102,0.3); display: flex; align-items: center; gap: 10px; z-index: 50; transition: all 0.2s; cursor: pointer; border: none;}
-.wa-float:active { transform: translateY(2px); }
-@media(max-width: 768px) { .wa-float { bottom: 16px; right: 16px; padding: 14px 20px; font-size: 14px; } }
 
 canvas { display: none; }
 </style>
@@ -247,8 +243,7 @@ canvas { display: none; }
 <div class="mbg" id="mSettings">
   <div class="mbox" style="max-width: 380px;">
     <div class="m-hdr"><div class="m-title">Settings</div><button class="btn-close" onclick="closeMod('mSettings')"><svg><use href="#ico-close"></use></svg></button></div>
-    <div class="fld"><label>Google Apps Script URL *</label><input id="sDbUrl" placeholder="https://script.google.com/macros/s/..."></div>
-    <div class="fld" style="margin-top:24px;"><label>Institute Name</label><input id="sName"></div>
+    <div class="fld"><label>Institute Name</label><input id="sName"></div>
     <div class="fld"><label>Location / Tagline</label><input id="sLoc"></div>
     <button class="btn-solid" onclick="saveSettings()">Save Changes</button>
     <button class="btn-outline" onclick="doExport()">Export Data (CSV)</button>
@@ -281,10 +276,22 @@ let activePayMonths = [];
 let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
-// --- PRELOAD IMAGES ---
+// --- PRELOAD IMAGES SAFELY (Bypass Tainted Canvas Issue) ---
 let IMG_LOGO = null, IMG_QR = null;
-function loadImg(url) {
-  return new Promise(res => { const img = new Image(); img.crossOrigin = "anonymous"; img.onload = () => res(img); img.onerror = () => res(null); img.src = url; });
+async function loadImg(url) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const objUrl = URL.createObjectURL(blob);
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => res(null);
+      img.src = objUrl;
+    });
+  } catch(e) {
+    return null; // Silent fail keeps canvas clean
+  }
 }
 async function initImages() { IMG_LOGO = await loadImg(LOGO_URL); IMG_QR = await loadImg(QR_URL); }
 initImages();
@@ -298,10 +305,6 @@ function hideSync() { setTimeout(() => syncBadge.classList.remove('show'), 2000)
 // --- DATA LOGIC ---
 async function load() {
   try { const s = localStorage.getItem("ttc_db_cloud_fy"); if(s) D = JSON.parse(s); } catch(e){}
-  
-  const savedUrl = localStorage.getItem("ttc_db_url");
-  if(savedUrl) DB_URL = savedUrl; // allow override from settings if needed
-
   renderAll();
   if(DB_URL) {
     showSync("Loading from cloud...");
@@ -343,10 +346,7 @@ function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2)
 const dispYear = (y, m) => m >= 9 ? y + 1 : y;
 
 // --- RENDER LOGIC ---
-function renderAll() {
-  document.getElementById("hdrLoc").textContent = D.cfg.loc;
-  renderStats(); renderYTabs(); renderList();
-}
+function renderAll() { document.getElementById("hdrLoc").textContent = D.cfg.loc; renderStats(); renderYTabs(); renderList(); }
 
 function renderStats() {
   let p = 0; D.students.forEach(s => { for(let i=0; i<=11; i++) { let pay = s.payments[pk(CY,i)]; if(pay) p += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0)); }});
@@ -412,7 +412,7 @@ function renderDetailsContent(s) {
   `;
 }
 
-// --- PAYMENT MODAL (CASCADE SYSTEM) ---
+// --- PAYMENT MODAL ---
 function openPayment(id, y, m) {
   const s = stu(id); const isFullyPaid = isPaid(s, y, m);
   document.getElementById("pId").value = id;
@@ -439,7 +439,7 @@ function openPayment(id, y, m) {
 function renderPayModal(id, y) {
   const s = stu(id); const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i));
   let maxM = Math.max(...activePayMonths); let totalDue = 0;
-  for(let i=0; i<=maxM; i++) totalDue += monthDue(s, y, i); // includes previous unpaid months
+  for(let i=0; i<=maxM; i++) totalDue += monthDue(s, y, i);
   
   const gridHtml = unpaidMonths.map(i => `<div class="pm-m-btn ${activePayMonths.includes(i)?'on':''}" onclick="togglePayMonth('${id}', ${y}, ${i})">${MN[i]}</div>`).join("");
 
@@ -476,7 +476,6 @@ function savePayLogic(id, y) {
   
   let maxM = Math.max(...activePayMonths); let monthsFunded = [];
 
-  // Waterfall distribution: Oldest debt first
   for(let i=0; i<=maxM; i++) {
     if(amtToDistribute <= 0) break;
     let mDue = monthDue(s, y, i);
@@ -505,8 +504,7 @@ function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); render
 
 // --- SMART REMINDER MODAL ---
 function openReminderModal(id) {
-  closeMod("mStudentDetails");
-  const s = stu(id); activeRemMonths = [];
+  closeMod("mStudentDetails"); const s = stu(id); activeRemMonths = [];
   for(let i=0; i<=CM; i++) { if(!isPaid(s, CY, i)) activeRemMonths.push(i); }
   if(activeRemMonths.length === 0) { alert(`No pending dues!`); return; }
   document.getElementById("rId").value = id; renderRemModal(); openMod("mReminderSettings");
@@ -547,14 +545,12 @@ async function executeReminder() {
 
 // --- SHARE LEDGER RECORD (STATEMENT) ---
 async function shareRecord(id) {
-  closeMod("mStudentDetails");
-  const s = stu(id);
+  closeMod("mStudentDetails"); const s = stu(id);
   const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   const W = 800; const H = 1350; cvs.width = W; cvs.height = H;
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
-  
   ctx.fillStyle = "#EFF6FF"; ctx.save(); drawRoundRect(ctx, 40, 40, W-80, 120, 24); ctx.clip(); ctx.fillRect(40,40, W-80, 120); ctx.restore(); ctx.fillRect(40, 140, W-80, 20);
   
   ctx.fillStyle = "#0F172A"; ctx.font = "bold 28px 'DM Sans', sans-serif"; ctx.textAlign = "left"; ctx.fillText(D.cfg.name, 60, 100);
@@ -562,16 +558,13 @@ async function shareRecord(id) {
   ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif"; ctx.fillText(`Academic Year: ${VY}-${(VY+1).toString().slice(-2)}`, W-60, 130);
 
   ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "900 36px 'DM Sans', sans-serif"; ctx.fillText(s.name, 60, 220);
-  ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo`, 60, 250);
+  ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo | Due: ${s.due||10}th`, 60, 250);
 
   ctx.fillStyle = "#E2E8F0"; ctx.fillRect(60, 280, W-120, 2);
-  
   ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
   ctx.fillText("MONTH", 60, 320); ctx.fillText("STATUS / DATE", 300, 320); ctx.textAlign = "right"; ctx.fillText("AMOUNT PAID", W-60, 320);
   
-  let yPos = 370; let tPaid = 0; let tPending = 0;
-  let txtRecord = "";
-  
+  let yPos = 370; let tPaid = 0; let tPending = 0; let txtRecord = "";
   for(let i=0; i<12; i++) {
     let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i);
     let p = s.payments[pk(VY,i)]; let amt = p?.amt !== undefined ? p.amt : (p?.paid ? s.fee : 0);
@@ -583,20 +576,16 @@ async function shareRecord(id) {
     if(pd) {
       ctx.fillStyle = "#10B981"; ctx.fillText("Paid", 300, yPos);
       ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif"; ctx.fillText(p.date ? new Date(p.date).toLocaleDateString("en-IN") : "Recorded", 360, yPos);
-      txtRecord += `\n- ${MN[i]}: Paid (Rs ${amt})`;
+      txtRecord += `\n- ${MN[i]}: Paid (Rs. ${amt})`;
     } else if(pt) {
       ctx.fillStyle = "#F59E0B"; ctx.fillText("Partial", 300, yPos);
-      txtRecord += `\n- ${MN[i]}: Partial (Rs ${amt})`;
+      txtRecord += `\n- ${MN[i]}: Partial (Rs. ${amt})`;
     } else {
       ctx.fillStyle = "#EF4444"; ctx.fillText("Pending", 300, yPos);
       txtRecord += `\n- ${MN[i]}: Pending`;
     }
-    
-    ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
-    ctx.fillText(`Rs. ${amt}`, W-60, yPos);
-    
-    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2);
-    yPos += 55;
+    ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
+    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2); yPos += 55;
   }
 
   ctx.fillStyle = "#F8FAFC"; drawRoundRect(ctx, 60, yPos+20, W-120, 120, 16); ctx.fill();
@@ -605,17 +594,20 @@ async function shareRecord(id) {
   ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString()}`, 90, yPos+100);
   ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString()}`, W/2, yPos+100);
 
-  const textMsg = `*Account Statement*\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nAcademic Year: ${VY}-${(VY+1).toString().slice(-2)}\n\n*Payment Record:*${txtRecord}\n\n*Summary:*\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
+  const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nAcademic Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
   const fileName = `Statement_${s.name}_${VY}.png`;
 
   try {
-    const blob = await new Promise(res => cvs.toBlob(res, "image/png"));
+    const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
+    if(!blob) throw new Error("Blob failed");
     const file = new File([blob], fileName, { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
     else { throw new Error("Fallback"); }
   } catch (err) {
-    const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    alert("Image downloaded! WhatsApp will open now.");
+    try {
+      const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      alert("Image downloaded! WhatsApp will open now.");
+    } catch(e) { alert("Browser security prevented image generation. Sending text only."); }
     setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
@@ -624,8 +616,7 @@ async function shareRecord(id) {
 async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   const s = stu(id); const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   const isReceipt = type === 'receipt';
-  const W = 800; const H = isReceipt ? 900 : 1100;
-  cvs.width = W; cvs.height = H;
+  const W = 800; const H = isReceipt ? 900 : 1100; cvs.width = W; cvs.height = H;
 
   const monthsText = monthsArr.length > 2 ? `${monthsArr.length} Months (${MN[monthsArr[0]]} - ${MN[monthsArr[monthsArr.length-1]]})` : monthsArr.map(x=>MN[x]).join(", ");
   const displayY = dispYear(y, monthsArr[monthsArr.length-1]);
@@ -633,7 +624,6 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
-
   ctx.fillStyle = isReceipt ? "#EFF6FF" : "#FEF2F2"; ctx.save(); drawRoundRect(ctx, 40, 40, W-80, 140, 24); ctx.clip(); ctx.fillRect(40,40, W-80, 140); ctx.restore(); ctx.fillRect(40, 160, W-80, 20);
 
   if(IMG_LOGO) { ctx.save(); ctx.beginPath(); ctx.arc(100, 110, 40, 0, Math.PI*2); ctx.clip(); ctx.drawImage(IMG_LOGO, 60, 70, 80, 80); ctx.restore(); }
@@ -681,7 +671,8 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   let textMsg = "";
   if(isReceipt) {
     const p = s.payments[pk(y,monthsArr[monthsArr.length-1])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
-    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nApplied to: ${monthsText} ${displayY}\nAmount Paid: Rs. ${finalAmount}\nMode: ${mObj.label}\nDate: ${p?.date ? new Date(p.date).toLocaleDateString("en-IN") : "—"}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
+    const dateStr = p?.date ? new Date(p.date).toLocaleDateString("en-IN") : "—";
+    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nApplied to: ${monthsText} ${displayY}\nAmount Paid: Rs. ${finalAmount}\nMode: ${mObj.label}\nDate: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
   } else {
     let minM = Math.min(...monthsArr); let arrears = 0; for(let i=0; i<minM; i++) arrears += monthDue(s, y, i);
     textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText} ${displayY}\n`;
@@ -690,13 +681,16 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   }
 
   try {
-    const blob = await new Promise(res => cvs.toBlob(res, "image/png"));
+    const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
+    if(!blob) throw new Error("Blob failed");
     const file = new File([blob], fileName, { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
     else { throw new Error("Fallback"); }
   } catch (err) {
-    const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    alert("Image downloaded! WhatsApp will open now.");
+    try {
+      const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      alert("Image downloaded! WhatsApp will open now.");
+    } catch (e) { alert("Browser security prevented image generation. Sending text only."); }
     setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
@@ -712,20 +706,10 @@ function saveStudent() {
   save(); closeMod("mAdd"); renderAll();
 }
 function delStu(id) { closeMod("mStudentDetails"); if(!confirm(`Delete ${stu(id).name}? This cannot be undone.`)) return; D.students = D.students.filter(s=>s.id!==id); save(); renderAll(); }
-function openSettings() { document.getElementById("sName").value = D.cfg.name; document.getElementById("sLoc").value = D.cfg.loc; document.getElementById("sDbUrl").value = localStorage.getItem("ttc_db_url")||""; openMod("mSettings"); }
-function saveSettings() { 
-  D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); 
-  const newUrl = document.getElementById("sDbUrl").value.trim();
-  if(newUrl) { DB_URL = newUrl; localStorage.setItem("ttc_db_url", DB_URL); }
-  save(); closeMod("mSettings"); renderAll(); 
-}
-function doExport() {
-  const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
-  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
-  const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
-  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
-}
+function openSettings() { document.getElementById("sName").value = D.cfg.name; document.getElementById("sLoc").value = D.cfg.loc; openMod("mSettings"); }
+function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 
+/* --- MODAL CONTROL --- */
 function openMod(id){ document.getElementById(id).classList.add("on"); }
 function closeMod(id){ document.getElementById(id).classList.remove("on"); }
 document.querySelectorAll(".mbg").forEach(bg=>{ bg.addEventListener("click", e=>{ if(e.target===bg) bg.classList.remove("on"); }); });

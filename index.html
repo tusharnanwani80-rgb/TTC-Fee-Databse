@@ -260,7 +260,7 @@ canvas { display: none; }
 <canvas id="imgCanvas" width="800" height="1450"></canvas>
 
 <script>
-// --- STATE & DATA ---
+// --- STATE & DATA (FINANCIAL YEAR = APRIL TO MARCH) ---
 const MN = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
 const FULL_MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -344,11 +344,10 @@ function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
 
 // --- MATH ENGINE FOR DYNAMIC MONTHS ---
-// Converts Financial Year and Financial Offset to exact Calendar Year & Month
-function getCalDate(y, mOffset) {
-  let totalFinMonths = y * 12 + mOffset;
-  let calM = (totalFinMonths + 3) % 12; // 0=Jan
-  let calY = Math.floor((totalFinMonths + 3) / 12);
+function getCalDate(finYear, finMonthIndex) {
+  let absoluteFinMonths = finYear * 12 + finMonthIndex;
+  let calM = (absoluteFinMonths + 3) % 12; // 0=Jan, 3=Apr
+  let calY = Math.floor((absoluteFinMonths + 3) / 12);
   return { M: calM, Y: calY };
 }
 
@@ -358,10 +357,11 @@ function getCycleLabel(s, y, m) {
   let dEnd = getCalDate(y, s.joinM + m + 1);
   let d1 = s.due || 10;
   let d2 = d1 > 1 ? d1 - 1 : 30; // Approx end date
-  return `${MN[(dStart.M+9)%12]} ${d1} - ${MN[(dEnd.M+9)%12]} ${d2}`;
+  // Using FULL_MN because dStart.M is native calendar (0=Jan)
+  return `${FULL_MN[dStart.M]} ${d1} - ${FULL_MN[dEnd.M]} ${d2}`;
 }
 
-// Gets the full coverage string for receipts (e.g. 21 Apr 2026 to 20 Jul 2026)
+// Gets the full coverage string for receipts
 function getCoverageString(s, y, monthsArr) {
   let dStart = getCalDate(y, s.joinM + monthsArr[0]);
   let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + 1);
@@ -380,8 +380,6 @@ function getPersonalMonth(s, globY, globM) {
 }
 
 function isNA(s, y, m) {
-  // If viewing a tab year before they joined, it's NA.
-  // Box 0 starts exactly on their join month, so if y == joinY, none are NA.
   return y < s.joinY;
 }
 
@@ -408,7 +406,6 @@ function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2)
 function renderAll() { document.getElementById("hdrLoc").textContent = D.cfg.loc; renderStats(); renderYTabs(); renderList(); }
 
 function renderStats() {
-  // Total collected for the current global calendar year CY
   let pTotalYear = 0; 
   D.students.forEach(s => { 
     for(let i=0; i<12; i++) { 
@@ -417,7 +414,6 @@ function renderStats() {
     }
   });
   
-  // Total expected and collected specifically for this current exact month
   let currentExpected = 0; let pThisMonth = 0;
   D.students.forEach(s => { 
     let pCurr = getPersonalMonth(s, CY, CM);
@@ -836,10 +832,8 @@ function openAdd() {
   document.getElementById("addTitle").textContent="Add Student"; document.getElementById("eId").value=""; 
   ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value=""); 
   document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
-  document.getElementById("eJoinM").innerHTML = FULL_MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-  // Set default to current calendar month (e.g., April=3, May=4)
-  document.getElementById("eJoinY").value = NOW.getFullYear(); 
-  document.getElementById("eJoinM").value = NOW.getMonth();
+  document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  document.getElementById("eJoinY").value = CY; document.getElementById("eJoinM").value = CM;
   openMod("mAdd"); 
 }
 
@@ -851,18 +845,10 @@ function editStu(id) {
   document.getElementById("eDue").value=s.due||10; 
   
   document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
-  document.getElementById("eJoinM").innerHTML = FULL_MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-  
-  // Backwards compatibility check
-  let currentJoinM = s.joinM !== undefined ? s.joinM : 0; 
-  if (s.joinM !== undefined && s.joinM < 12) {
-    // If it was the old financial index (0 = Apr), map it to calendar month (3 = Apr)
-    // NOTE: If you are continuing from index (21), old entries used 0 for Apr.
-    // For safety, the app handles raw index internally, so we just use what's saved.
-  }
+  document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
   
   document.getElementById("eJoinY").value = s.joinY !== undefined ? s.joinY : CY;
-  document.getElementById("eJoinM").value = s.joinM !== undefined ? s.joinM : 0;
+  document.getElementById("eJoinM").value = s.joinM !== undefined ? s.joinM : CM;
   openMod("mAdd"); 
 }
 
@@ -878,8 +864,8 @@ function delStu(id) { closeMod("mStudentDetails"); if(!confirm(`Delete ${stu(id)
 function openSettings() { document.getElementById("sName").value = D.cfg.name; document.getElementById("sLoc").value = D.cfg.loc; openMod("mSettings"); }
 function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 function doExport() {
-  const hdr=["Name","Class","Fee/Month","Due Date","M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12","Total Collected"];
-  const rows=D.students.map(s=>{ let yrCount = 0; for(let i=0; i<12; i++){if(isPaid(s,VY,i))yrCount++;} return [s.name,s.cls,s.fee,(s.due||10)+"th",...[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
+  const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
+  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
   const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
 }

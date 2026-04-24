@@ -20,6 +20,7 @@
   --danger: #EF4444;
   --danger-bg: #FEE2E2;
   --warning: #F59E0B;
+  --warning-bg: #FEF3C7;
   --font: 'DM Sans', system-ui, -apple-system, sans-serif;
 }
 
@@ -89,8 +90,9 @@ input, select { font-family: inherit; }
 .stu-status { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 .stu-fee { font-size: 14px; font-weight: 800; color: var(--text-main); }
 .badge { padding: 4px 10px; border-radius: 50px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-.badge.paid { background: var(--success-bg); color: var(--success); }
-.badge.due { background: var(--danger-bg); color: var(--danger); }
+.badge.paid { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+.badge.partial { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+.badge.due { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
 
 /* MODALS (BOTTOM SHEETS) */
 .mbg { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s; }
@@ -129,12 +131,18 @@ input, select { font-family: inherit; }
 .m-box-l { font-size: 12px; font-weight: 700; color: var(--text-mut); }
 .m-box-i { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: transparent; }
 .m-box-i svg { width: 12px; height: 12px; stroke-width: 3; }
+
 .m-box.paid { background: #F0FDF4; border-color: rgba(16, 185, 129, 0.3); }
 .m-box.paid .m-box-i { background: var(--success); border-color: var(--success); color: white; }
-.m-box.curr:not(.paid) { background: var(--primary-light); border-color: rgba(37,99,235,0.3); }
-.m-box.curr:not(.paid) .m-box-i { border-color: var(--primary); }
-.m-box.ov:not(.paid) { background: var(--danger-bg); border-color: rgba(239, 68, 68, 0.3); }
-.m-box.ov:not(.paid) .m-box-i { border-color: var(--danger); }
+
+.m-box.partial { background: var(--warning-bg); border-color: rgba(245, 158, 11, 0.3); }
+.m-box.partial .m-box-i { border-color: var(--warning); color: var(--warning); }
+
+.m-box.curr:not(.paid):not(.partial) { background: var(--primary-light); border-color: rgba(37,99,235,0.3); }
+.m-box.curr:not(.paid):not(.partial) .m-box-i { border-color: var(--primary); }
+
+.m-box.ov:not(.paid):not(.partial) { background: var(--danger-bg); border-color: rgba(239, 68, 68, 0.3); }
+.m-box.ov:not(.paid):not(.partial) .m-box-i { border-color: var(--danger); }
 
 .sd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .act-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); transition: background 0.2s; }
@@ -155,7 +163,7 @@ input, select { font-family: inherit; }
 .btn-outline { width: 100%; padding: 16px; background: var(--surface); border: 1px solid var(--border); color: var(--text-main); font-size: 15px; font-weight: 700; border-radius: 12px; margin-top: 10px; cursor: pointer; }
 
 /* PAYMENT MODAL SPECIFICS */
-.pay-amt { text-align: center; font-size: 14px; font-weight: 600; color: var(--text-mut); margin-bottom: 20px; background: var(--bg-main); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
+.pay-amt { text-align: center; background: var(--bg-main); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; }
 .amt-input { width: 100%; text-align: center; border: none; background: transparent; font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -1px; outline: none; padding: 0; margin-top: 4px; }
 .amt-input:focus { border: none; background: transparent; }
 
@@ -194,6 +202,7 @@ canvas { display: none; }
   <symbol id="ico-upi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></symbol>
   <symbol id="ico-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></symbol>
   <symbol id="ico-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></symbol>
+  <symbol id="ico-partial" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"></circle></symbol>
 </svg>
 
 <div class="cloud-sync" id="syncBadge">
@@ -379,7 +388,17 @@ async function save() {
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
-function paid(s,y,m){return !!(s.payments[pk(y,m)]?.paid);}
+
+// Calculate exact due amount for a specific month
+function monthDue(s, y, m) {
+  let p = s.payments[pk(y,m)];
+  if (!p) return s.fee;
+  if (p.amt !== undefined) return Math.max(0, s.fee - p.amt);
+  return p.paid ? 0 : s.fee; // legacy fallback
+}
+
+function isPaid(s, y, m) { return monthDue(s, y, m) === 0; }
+function isPartial(s, y, m) { let d = monthDue(s, y, m); return d > 0 && d < s.fee; }
 function isOv(s){return CD>(s.due||10)&&VY===CY;}
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}
 const dispYear = (y, m) => m >= 9 ? y + 1 : y;
@@ -393,12 +412,13 @@ function renderAll() {
 }
 
 function renderStats() {
-  const p = D.students.filter(s=>paid(s,CY,CM)).reduce((a,s)=>a+(s.payments[pk(CY,CM)]?.amt || s.fee),0);
+  // Total Collected in Current Year
+  let p = 0; D.students.forEach(s => { for(let i=0; i<=11; i++) { let pay = s.payments[pk(CY,i)]; if(pay) p += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0)); }});
   const t = D.students.reduce((a,s)=>a+s.fee,0);
   document.getElementById("statsRow").innerHTML = `
-    <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${p.toLocaleString("en-IN")}</div><div class="stat-l">${MN[CM]} Collected</div></div>
-    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${(t-p).toLocaleString("en-IN")}</div><div class="stat-l">${MN[CM]} Pending</div></div>
-    <div class="stat-card"><div class="stat-v">₹${t.toLocaleString("en-IN")}</div><div class="stat-l">Monthly Total</div></div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${p.toLocaleString("en-IN")}</div><div class="stat-l">${CY}-${(CY+1).toString().slice(-2)} Collected</div></div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${(t-monthDue(D.students[0], CY, CM) === t ? 0 : 0)}</div><div class="stat-l">Monthly Revenue</div></div>
+    <div class="stat-card"><div class="stat-v">₹${t.toLocaleString("en-IN")}</div><div class="stat-l">Expected / Mo</div></div>
   `;
 }
 
@@ -412,21 +432,21 @@ function renderList() {
   if(!list.length) { document.getElementById("stuList").innerHTML = `<div style="text-align:center; padding: 40px; color:var(--text-mut); font-weight:600;">No students found.</div>`; return; }
 
   document.getElementById("stuList").innerHTML = list.map(s => {
-    const isPd = paid(s, VY, CM);
-    const isOvrdue = isOv(s) && !isPd && VY === CY;
     let badge = "";
     if (VY === CY) {
-      if(isPd) badge = `<div class="badge paid">Paid</div>`;
-      else if(isOvrdue) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
+      let mDue = monthDue(s, VY, CM);
+      if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
+      else if (mDue > 0 && mDue < s.fee) badge = `<div class="badge partial">Bal ₹${mDue}</div>`;
+      else if (isOv(s)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
       else badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Due ₹${s.fee}</div>`;
     } else {
-      let yc = 0; MN.forEach((_,i)=>{if(paid(s,VY,i))yc++;});
+      let yc = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yc++;});
       badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/12 Paid</div>`;
     }
     return `
       <div class="stu-card" onclick="openDetails('${s.id}')">
         <div class="stu-av">${getInitials(s.name)}</div>
-        <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">Class ${s.cls} ${s.phone?"· 📱":""}</div></div>
+        <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">Class ${s.cls} ${s.phone?"· Linked":""}</div></div>
         <div class="stu-status">${badge}</div>
       </div>`;
   }).join("");
@@ -436,11 +456,20 @@ function renderList() {
 function openDetails(id) { VY = CY; renderDetailsContent(stu(id)); openMod('mStudentDetails'); }
 function renderDetailsContent(s) {
   const monthGrid = MN.map((mName, i) => {
-    const pd = paid(s, VY, i);
+    const pd = isPaid(s, VY, i);
+    const pt = isPartial(s, VY, i);
     const iC = i === CM && VY === CY;
     const ov = iC && isOv(s) && !pd;
-    let cls = "m-box" + (pd ? " paid" : (iC ? " curr" : (ov ? " ov" : "")));
-    return `<div class="${cls}" onclick="openPayment('${s.id}', ${VY}, ${i})"><div class="m-box-l">${mName}</div><div class="m-box-i"><svg><use href="#ico-check"></use></svg></div></div>`;
+    
+    let cls = "m-box";
+    let icon = `<svg><use href="#ico-check"></use></svg>`;
+    
+    if(pd) { cls += " paid"; }
+    else if(pt) { cls += " partial"; icon = `<svg><use href="#ico-partial"></use></svg>`; }
+    else if(iC) { cls += " curr"; }
+    else if(ov) { cls += " ov"; }
+
+    return `<div class="${cls}" onclick="openPayment('${s.id}', ${VY}, ${i})"><div class="m-box-l">${mName}</div><div class="m-box-i">${icon}</div></div>`;
   }).join("");
 
   document.getElementById("sdContent").innerHTML = `
@@ -451,22 +480,26 @@ function renderDetailsContent(s) {
     <div class="year-ctrl"><div class="yc-title">Fee Record: ${VY}-${(VY+1).toString().slice(-2)}</div></div>
     <div class="m-grid">${monthGrid}</div>
     <div class="sd-actions">
-      ${s.phone ? `<button class="act-btn wa" onclick="openReminderModal('${s.id}')"><svg><use href="#ico-wa"></use></svg> Send Reminder</button>` : ''}
+      ${s.phone ? `<button class="act-btn wa" onclick="openReminderModal('${s.id}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> Send Reminder</button>` : ''}
       <button class="act-btn" onclick="editStu('${s.id}')"><svg><use href="#ico-edit"></use></svg> Edit</button>
       <button class="act-btn del" onclick="delStu('${s.id}')"><svg><use href="#ico-trash"></use></svg> Delete</button>
     </div>
   `;
 }
 
-// --- PAYMENT MODAL (PARTIAL PAYMENT ENABLED) ---
+// --- PAYMENT MODAL (CASCADE SYSTEM) ---
 function openPayment(id, y, m) {
-  const s = stu(id); const p = s.payments[pk(y,m)];
+  const s = stu(id); 
+  const isFullyPaid = isPaid(s, y, m);
+  
   document.getElementById("pId").value = id;
-  document.getElementById("payTitle").textContent = p?.paid ? "Payment Details" : "Record Payment";
+  document.getElementById("payTitle").textContent = isFullyPaid ? "Payment Details" : "Record Payment";
 
-  if(p?.paid) {
+  if(isFullyPaid) {
+    const p = s.payments[pk(y,m)];
     const mObj = MODES.find(x=>x.id===(p.mode||"cash"))||MODES[0];
     const amtSaved = p.amt !== undefined ? p.amt : s.fee;
+    
     document.getElementById("payBody").innerHTML = `
       <div style="background:var(--success-bg); padding:20px; border-radius:16px; margin-bottom:20px; text-align:center;">
         <div style="font-size:14px; font-weight:700; color:var(--success); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Paid Successfully</div>
@@ -475,20 +508,27 @@ function openPayment(id, y, m) {
         ${p.note?`<div style="font-size:13px; color:var(--text-main); margin-top:8px; font-weight:500;">Note: ${p.note}</div>`:''}
       </div>
       <button class="btn-solid" style="margin-bottom:10px;" onclick="resendSingleReceipt('${id}',${y},${m},${amtSaved})">
-        <svg width="18" height="18"><use href="#ico-wa"></use></svg> Share Receipt via WA
+        Share Receipt via WA
       </button>
       <button class="btn-outline" style="color:var(--danger); border-color:var(--danger-bg);" onclick="unmarkPaid('${id}',${y},${m})">Remove Record</button>
     `;
   } else {
-    activePayMonths = [m]; renderPayModal(id, y);
+    activePayMonths = [m]; 
+    renderPayModal(id, y);
   }
   openMod("mPayment");
 }
 
 function renderPayModal(id, y) {
   const s = stu(id);
-  const totalDue = s.fee * activePayMonths.length;
-  const unpaidMonths = MN.map((name, i) => i).filter(i => !paid(s, y, i));
+  const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i));
+  
+  // Calculate total due sequentially up to the max selected month (includes previous unpaid months)
+  let maxM = Math.max(...activePayMonths);
+  let totalDue = 0;
+  for(let i=0; i<=maxM; i++) {
+    totalDue += monthDue(s, y, i);
+  }
   
   const gridHtml = unpaidMonths.map(i => {
     const isOn = activePayMonths.includes(i);
@@ -502,16 +542,17 @@ function renderPayModal(id, y) {
         <span style="font-size:36px; font-weight:800; color:var(--primary);">₹</span>
         <input type="number" id="pAmt" class="amt-input" value="${totalDue}">
       </div>
+      <div style="font-size:11px; color:var(--text-mut); margin-top:8px;">Calculated dynamically including any previous arrears.</div>
     </div>
     
-    <div class="fld"><label>Select Months to Mark Paid</label><div class="pm-month-grid">${gridHtml}</div></div>
+    <div class="fld"><label>Select Target Months to Clear</label><div class="pm-month-grid">${gridHtml}</div></div>
     <div class="fld"><label>Payment Method</label><div class="pm-modes">${MODES.map(md => `<button class="pm-mode ${md.id===selMode?'on':''}" onclick="setMode('${md.id}', '${id}', ${y})">${md.icon} ${md.label}</button>`).join('')}</div></div>
     <div class="f-row">
       <div class="fld"><label>Date</label><input id="pDate" type="date" value="${NOW.toISOString().slice(0,10)}"></div>
       <div class="fld"><label>Note</label><input id="pNote" placeholder="Optional"></div>
     </div>
     
-    ${s.phone ? `<button class="btn-solid" onclick="savePayAndShare('${id}',${y})" style="background:#25D366; margin-bottom:10px;"><svg width="18" height="18"><use href="#ico-wa"></use></svg> Save & Share Receipt</button>` : ''}
+    ${s.phone ? `<button class="btn-solid" onclick="savePayAndShare('${id}',${y})" style="background:#25D366; margin-bottom:10px;">Save & Share Receipt</button>` : ''}
     <button class="btn-outline" onclick="savePayOnly('${id}',${y})">Save Only</button>
   `;
 }
@@ -525,17 +566,58 @@ function togglePayMonth(id, y, m) {
 function setMode(m, id, y) { selMode = m; renderPayModal(id, y); }
 
 function savePayLogic(id, y) {
-  const s = stu(id); const d = document.getElementById("pDate").value; const n = document.getElementById("pNote").value.trim();
-  const totalAmt = parseInt(document.getElementById("pAmt").value) || 0;
-  const splitAmt = Math.round(totalAmt / activePayMonths.length); // Distribute custom amount evenly
+  const s = stu(id); 
+  const d = document.getElementById("pDate").value; 
+  const n = document.getElementById("pNote").value.trim();
+  let amtToDistribute = parseInt(document.getElementById("pAmt").value) || 0;
+  const totalPaidOrig = amtToDistribute;
   
-  activePayMonths.forEach(m => { s.payments[pk(y,m)] = { paid: true, mode: selMode, date: d, note: n, amt: splitAmt }; });
-  save(); renderAll(); renderDetailsContent(s); return totalAmt;
+  let maxM = Math.max(...activePayMonths);
+  let monthsFunded = [];
+
+  // Waterfall distribution: Oldest debt first, up to the maximum selected month
+  for(let i=0; i<=maxM; i++) {
+    if(amtToDistribute <= 0) break;
+    
+    let mDue = monthDue(s, y, i);
+    if(mDue > 0) {
+      monthsFunded.push(i);
+      let payForThisMonth = Math.min(amtToDistribute, mDue);
+      amtToDistribute -= payForThisMonth;
+      
+      let p = s.payments[pk(y,i)] || {};
+      let currAmt = p.amt !== undefined ? p.amt : (p.paid ? s.fee : 0);
+      let newAmt = currAmt + payForThisMonth;
+      
+      s.payments[pk(y,i)] = {
+        paid: newAmt >= s.fee,
+        amt: newAmt,
+        mode: selMode,
+        date: d,
+        note: n
+      };
+    }
+  }
+  
+  if (monthsFunded.length === 0) monthsFunded = activePayMonths; // Fallback for display
+  
+  save(); renderAll(); renderDetailsContent(s); 
+  return { amount: totalPaidOrig, months: monthsFunded };
 }
 
 function savePayOnly(id, y) { savePayLogic(id, y); closeMod("mPayment"); }
-async function savePayAndShare(id, y) { const totalAmt = savePayLogic(id, y); closeMod("mPayment"); await generateAndShare(id, y, activePayMonths, 'receipt', totalAmt); }
-async function resendSingleReceipt(id, y, m, amtSaved) { closeMod("mPayment"); await generateAndShare(id, y, [m], 'receipt', amtSaved); }
+
+async function savePayAndShare(id, y) { 
+  const result = savePayLogic(id, y); 
+  closeMod("mPayment"); 
+  await generateAndShare(id, y, result.months, 'receipt', result.amount); 
+}
+
+async function resendSingleReceipt(id, y, m, amtSaved) { 
+  closeMod("mPayment"); 
+  await generateAndShare(id, y, [m], 'receipt', amtSaved); 
+}
+
 function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); renderAll(); renderDetailsContent(stu(id)); closeMod("mPayment"); }
 
 // --- SMART REMINDER MODAL ---
@@ -543,7 +625,7 @@ function openReminderModal(id) {
   closeMod("mStudentDetails");
   const s = stu(id);
   activeRemMonths = [];
-  for(let i=0; i<=CM; i++) { if(!paid(s, CY, i)) activeRemMonths.push(i); }
+  for(let i=0; i<=CM; i++) { if(!isPaid(s, CY, i)) activeRemMonths.push(i); }
   
   if(activeRemMonths.length === 0) { alert(`No pending dues up to ${MN[CM]}!`); return; }
   
@@ -555,10 +637,13 @@ function openReminderModal(id) {
 function renderRemModal() {
   const id = document.getElementById("rId").value;
   const s = stu(id);
-  const totalDue = s.fee * activeRemMonths.length;
+  
+  let maxM = Math.max(...activeRemMonths);
+  let totalDue = 0;
+  for(let i=0; i<=maxM; i++) totalDue += monthDue(s, CY, i);
   
   let allUnpaid = [];
-  for(let i=0; i<=11; i++) { if(!paid(s, CY, i)) allUnpaid.push(i); }
+  for(let i=0; i<=11; i++) { if(!isPaid(s, CY, i)) allUnpaid.push(i); }
   
   const gridHtml = allUnpaid.map(i => {
     const isOn = activeRemMonths.includes(i);
@@ -567,14 +652,15 @@ function renderRemModal() {
 
   document.getElementById("remBody").innerHTML = `
     <div class="pay-amt">
-      <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Remind For Amount</span>
+      <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Remind For Total Balance</span>
       <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">
         <span style="font-size:36px; font-weight:800; color:var(--primary);">₹</span>
         <input type="number" id="rAmt" class="amt-input" style="color:var(--danger);" value="${totalDue}">
       </div>
+      <div style="font-size:11px; color:var(--text-mut); margin-top:8px;">Includes all previous arrears automatically.</div>
     </div>
-    <div class="fld"><label>Select Months to Remind</label><div class="pm-month-grid">${gridHtml}</div></div>
-    <button class="btn-solid" onclick="executeReminder()" style="background:#25D366; margin-top:10px;"><svg width="18" height="18"><use href="#ico-wa"></use></svg> Generate & Send Reminder</button>
+    <div class="fld"><label>Target Months (Reference)</label><div class="pm-month-grid">${gridHtml}</div></div>
+    <button class="btn-solid" onclick="executeReminder()" style="background:#25D366; margin-top:10px;">Generate & Send Reminder</button>
   `;
 }
 
@@ -633,36 +719,57 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   ctx.fillStyle = "#64748B"; ctx.font = "600 20px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls}`, 80, 325);
 
   ctx.fillStyle = isReceipt ? "#F8FAFC" : "#FEF2F2"; drawRoundRect(ctx, 80, 380, W-160, 120, 20); ctx.fill();
-  ctx.fillStyle = isReceipt ? "#64748B" : "#EF4444"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "AMOUNT PAID" : "TOTAL PENDING", 110, 430);
+  ctx.fillStyle = isReceipt ? "#64748B" : "#EF4444"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "AMOUNT RECEIVED" : "TOTAL PENDING", 110, 430);
   ctx.fillStyle = isReceipt ? "#2563EB" : "#EF4444"; ctx.font = "900 48px 'DM Sans', sans-serif"; ctx.fillText(`₹${finalAmount.toLocaleString("en-IN")}`, 110, 480);
-  ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "BILLING CYCLE" : "DUE FOR", W-110, 430);
+  
+  ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "APPLIED TO" : "DUE FOR", W-110, 430);
   ctx.font = "800 22px 'DM Sans', sans-serif"; ctx.fillText(`${monthsText} ${displayY}`, W-110, 475);
 
   ctx.strokeStyle = "#E2E8F0"; ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(80, 550); ctx.lineTo(W-80, 550); ctx.stroke(); ctx.setLineDash([]);
 
   if (isReceipt) {
-    const p = s.payments[pk(y,monthsArr[0])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
+    const p = s.payments[pk(y,monthsArr[monthsArr.length-1])]; // Use latest applied month for method details
+    const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
     ctx.textAlign = "left"; ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText("PAYMENT DATE", 80, 620); ctx.fillText("METHOD", W/2, 620);
     ctx.fillStyle = "#0F172A"; ctx.font = "700 20px 'DM Sans', sans-serif"; ctx.fillText(p?.date ? new Date(p.date+`T00:00:00`).toLocaleDateString("en-IN") : "—", 80, 650); ctx.fillText(mObj.label, W/2, 650);
-    ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText("DUE DATE", 80, 710); if(p?.note) ctx.fillText("NOTE", W/2, 710);
-    ctx.fillStyle = "#0F172A"; ctx.font = "700 20px 'DM Sans', sans-serif"; ctx.fillText(dueDateStr, 80, 740); if(p?.note) ctx.fillText(p.note, W/2, 740);
+    
+    // Check if any balance remains
+    let maxM = Math.max(...monthsArr);
+    let remainingBal = 0; for(let i=0; i<=maxM; i++) remainingBal += monthDue(s, y, i);
+    
+    ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText("DUE DATE", 80, 710); if(remainingBal > 0) ctx.fillText("REMAINING BALANCE", W/2, 710);
+    ctx.fillStyle = "#0F172A"; ctx.font = "700 18px 'DM Sans', sans-serif"; ctx.fillText(dueDateStr, 80, 740); if(remainingBal > 0) { ctx.fillStyle = "#EF4444"; ctx.fillText(`₹${remainingBal.toLocaleString("en-IN")}`, W/2, 740); }
     
     ctx.textAlign = "center"; ctx.fillStyle = "#10B981"; ctx.font = "800 20px 'DM Sans', sans-serif"; ctx.fillText("Payment Successful", W/2, 820);
     ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif"; ctx.fillText("This is a digitally generated receipt.", W/2, 850);
   } else {
-    ctx.textAlign = "center"; ctx.fillStyle = "#EF4444"; ctx.font = "800 20px 'DM Sans', sans-serif"; ctx.fillText(`Due Date: ${dueDateStr}`, W/2, 610);
-    ctx.fillStyle = "#0F172A"; ctx.font = "700 18px 'DM Sans', sans-serif"; ctx.fillText("Scan to pay instantly via UPI", W/2, 660);
-    if(IMG_QR) ctx.drawImage(IMG_QR, (W/2)-150, 690, 300, 300); else { ctx.fillStyle = "#E2E8F0"; drawRoundRect(ctx, (W/2)-150, 690, 300, 300, 16); ctx.fill(); }
+    // For Reminders: Check if arrears exist
+    let minM = Math.min(...monthsArr);
+    let arrears = 0; for(let i=0; i<minM; i++) arrears += monthDue(s, y, i);
+    
+    ctx.textAlign = "center"; ctx.fillStyle = "#EF4444"; ctx.font = "800 18px 'DM Sans', sans-serif"; 
+    ctx.fillText(`Due Date: ${dueDateStr}`, W/2, 600);
+    if (arrears > 0) {
+      ctx.fillStyle = "#64748B"; ctx.font = "600 14px 'DM Sans', sans-serif";
+      ctx.fillText(`Includes previous unpaid balance of ₹${arrears.toLocaleString("en-IN")}`, W/2, 630);
+    }
+    
+    ctx.fillStyle = "#0F172A"; ctx.font = "700 18px 'DM Sans', sans-serif"; ctx.fillText("Scan to pay instantly via UPI", W/2, 680);
+    if(IMG_QR) ctx.drawImage(IMG_QR, (W/2)-140, 710, 280, 280); else { ctx.fillStyle = "#E2E8F0"; drawRoundRect(ctx, (W/2)-140, 710, 280, 280, 16); ctx.fill(); }
   }
 
   const fileName = isReceipt ? `Receipt_${s.name}_${monthsText.replace(/ /g,'_')}.png` : `Reminder_${s.name}_${monthsText.replace(/ /g,'_')}.png`;
   let textMsg = "";
   if(isReceipt) {
-    const p = s.payments[pk(y,monthsArr[0])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
+    const p = s.payments[pk(y,monthsArr[monthsArr.length-1])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
     const dateStr = p?.date ? new Date(p.date+`T00:00:00`).toLocaleDateString("en-IN") : "—";
-    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nBilling Cycle: ${monthsText} ${displayY}\nAmount Paid: Rs ${finalAmount}\nMode: ${mObj.label}\nPayment Date: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
+    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nApplied to: ${monthsText} ${displayY}\nAmount Paid: Rs. ${finalAmount}\nMode: ${mObj.label}\nDate: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
   } else {
-    textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText} ${displayY}\nTotal Due: Rs ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
+    let minM = Math.min(...monthsArr);
+    let arrears = 0; for(let i=0; i<minM; i++) arrears += monthDue(s, y, i);
+    textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText} ${displayY}\n`;
+    if(arrears > 0) textMsg += `Previous Balance: Rs. ${arrears}\n`;
+    textMsg += `Total Due: Rs. ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
 
   try {
@@ -693,7 +800,7 @@ function openSettings() { document.getElementById("sName").value = D.cfg.name; d
 function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 function doExport() {
   const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
-  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(paid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>paid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
+  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
   const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
 }

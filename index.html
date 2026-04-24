@@ -495,19 +495,8 @@ function savePayLogic(id, y) {
 }
 
 function savePayOnly(id, y) { savePayLogic(id, y); closeMod("mPayment"); }
-
-// CORE ASYNC FUNCTIONS (Required for Share Sheet)
-async function savePayAndShare(id, y) { 
-  const res = savePayLogic(id, y); 
-  closeMod("mPayment"); 
-  await generateAndShare(id, y, res.months, 'receipt', res.amount); 
-}
-
-async function resendSingleReceipt(id, y, m, amtSaved) { 
-  closeMod("mPayment"); 
-  await generateAndShare(id, y, [m], 'receipt', amtSaved); 
-}
-
+async function savePayAndShare(id, y) { const res = savePayLogic(id, y); closeMod("mPayment"); await generateAndShare(id, y, res.months, 'receipt', res.amount); }
+async function resendSingleReceipt(id, y, m, amtSaved) { closeMod("mPayment"); await generateAndShare(id, y, [m], 'receipt', amtSaved); }
 function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); renderAll(); renderDetailsContent(stu(id)); closeMod("mPayment"); }
 
 // --- SMART REMINDER MODAL ---
@@ -692,23 +681,49 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   await exportCanvas(cvs, fileName, textMsg, s.phone);
 }
 
-// --- BULLETPROOF CANVAS EXPORT ---
+// --- GODMODE: DIRECT-TO-CHAT CLIPBOARD EXPORT ---
 async function exportCanvas(cvs, fileName, textMsg, phone) {
+  // 1. Generate image blob securely
+  let blob;
   try {
-    const dataUrl = cvs.toDataURL("image/png");
-    const blob = await (await fetch(dataUrl)).blob(); // Bulletproof Blob bypass
-    const file = new File([blob], fileName, { type: "image/png" });
-    
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { 
-      await navigator.share({ files: [file], title: fileName, text: textMsg }); 
-    } else { throw new Error("Share API not supported"); }
-  } catch (err) {
-    console.log("Fallback triggered:", err);
+    blob = await new Promise(res => cvs.toBlob(res, "image/png"));
+  } catch(e) {
+    alert("Error generating image."); return;
+  }
+
+  // 2. Direct-to-Chat Flow (If a phone number exists)
+  if (phone && phone.length > 5) {
     try {
-      const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      alert("Image downloaded! WhatsApp will open now. Please attach the image manually.");
-    } catch(e) { alert("Sending text only. Ensure browser allows downloads."); }
-    setTimeout(() => { window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
+      // Attempt 1: Copy to clipboard (Works on Desktop/Android Chrome/iOS 13.4+)
+      const item = new ClipboardItem({ "image/png": blob });
+      await navigator.clipboard.write([item]);
+      alert("✅ Image copied to clipboard!\n\n1. WhatsApp will open the parent's chat now.\n2. Long-press the text box and tap 'Paste' to attach the receipt/reminder.");
+    } catch (err) {
+      // Attempt 2: Fallback silently download image
+      const dataUrl = cvs.toDataURL("image/png");
+      const a = document.createElement("a"); a.href = dataUrl; a.download = fileName; 
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      alert("⬇️ Image downloaded to your device!\n\nWhatsApp will open the parent's chat now. Tap the 📎 attach icon and select the image.");
+    }
+    
+    // Rip open the exact WhatsApp Chat
+    setTimeout(() => { 
+      window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`; 
+    }, 300);
+    return;
+  }
+
+  // 3. Standard Fallback Share (If no phone number is saved for student)
+  try {
+    const file = new File([blob], fileName, { type: "image/png" });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { 
+      await navigator.share({ files: [file], title: fileName, text: textMsg }); 
+    } else { throw new Error("Share Fallback"); }
+  } catch (err) {
+    const dataUrl = cvs.toDataURL("image/png");
+    const a = document.createElement("a"); a.href = dataUrl; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    alert("Image downloaded! WhatsApp will open now. Please attach the image manually.");
+    setTimeout(() => { window.open(`https://wa.me/?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
 

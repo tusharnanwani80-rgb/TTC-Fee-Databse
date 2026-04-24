@@ -124,7 +124,7 @@ input, select { font-family: inherit; }
 .m-box.ov:not(.paid):not(.partial) .m-box-i { border-color: var(--danger); }
 
 .sd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.act-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); transition: background 0.2s; cursor: pointer; }
+.act-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); transition: background 0.2s; }
 .act-btn:active { background: var(--bg-main); }
 .act-btn svg { width: 16px; height: 16px; color: var(--text-mut); }
 .act-btn.wa { background: #25D366; color: white; border-color: #25D366; }
@@ -230,7 +230,7 @@ canvas { display: none; }
     <div class="fld"><label>Full Name</label><input id="eName" placeholder="e.g. Aarav Sharma"></div>
     <div class="f-row">
       <div class="fld"><label>Class</label><input id="eCls" placeholder="e.g. 10"></div>
-      <div class="fld"><label>Monthly Fee (₹)</label><input id="eFee" type="number" placeholder="800"></div>
+      <div class="fld"><label>Monthly Fee (Rs.)</label><input id="eFee" type="number" placeholder="800"></div>
     </div>
     <div class="f-row">
       <div class="fld"><label>WhatsApp No.</label><input id="ePhone" type="tel" placeholder="919876543210"></div>
@@ -270,28 +270,24 @@ const MODES=[
   {id:"bank",label:"Bank",icon:"<svg width='16' height='16'><use href='#ico-bank'></use></svg>"},
 ];
 
-let DB_URL = "https://script.google.com/macros/s/AKfycbx23q-7hv2ZXazHw0RsTdi9wQQfjArlnVURTFjGEiOasUvFwt1S98TFraFmRmm2xGvj/exec"; // HARDCODED
+// 🔴 HARDCODED APPS SCRIPT URL 🔴
+let DB_URL = "https://script.google.com/macros/s/AKfycbx23q-7hv2ZXazHw0RsTdi9wQQfjArlnVURTFjGEiOasUvFwt1S98TFraFmRmm2xGvj/exec";
+
 let VY=CY, selMode="cash";
 let activePayMonths = [];
 let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
-// --- PRELOAD IMAGES SAFELY (Bypass Tainted Canvas Issue) ---
+// --- PRELOAD IMAGES SAFELY (Bypass CORS Tainting) ---
 let IMG_LOGO = null, IMG_QR = null;
-async function loadImg(url) {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const objUrl = URL.createObjectURL(blob);
-    return new Promise(res => {
-      const img = new Image();
-      img.onload = () => res(img);
-      img.onerror = () => res(null);
-      img.src = objUrl;
-    });
-  } catch(e) {
-    return null; // Silent fail keeps canvas clean
-  }
+function loadImg(url) {
+  return new Promise(res => { 
+    const img = new Image(); 
+    img.crossOrigin = "anonymous"; 
+    img.onload = () => res(img); 
+    img.onerror = () => res(null); 
+    img.src = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url); 
+  });
 }
 async function initImages() { IMG_LOGO = await loadImg(LOGO_URL); IMG_QR = await loadImg(QR_URL); }
 initImages();
@@ -498,8 +494,8 @@ function savePayLogic(id, y) {
 }
 
 function savePayOnly(id, y) { savePayLogic(id, y); closeMod("mPayment"); }
-async function savePayAndShare(id, y) { const res = savePayLogic(id, y); closeMod("mPayment"); await generateAndShare(id, y, res.months, 'receipt', res.amount); }
-async function resendSingleReceipt(id, y, m, amtSaved) { closeMod("mPayment"); await generateAndShare(id, y, [m], 'receipt', amtSaved); }
+function savePayAndShare(id, y) { const res = savePayLogic(id, y); closeMod("mPayment"); generateAndShare(id, y, res.months, 'receipt', res.amount); }
+function resendSingleReceipt(id, y, m, amtSaved) { closeMod("mPayment"); generateAndShare(id, y, [m], 'receipt', amtSaved); }
 function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); renderAll(); renderDetailsContent(stu(id)); closeMod("mPayment"); }
 
 // --- SMART REMINDER MODAL ---
@@ -538,19 +534,27 @@ function toggleRemMonth(m) {
   renderRemModal();
 }
 
-async function executeReminder() {
+function executeReminder() {
   const id = document.getElementById("rId").value; const customAmt = parseInt(document.getElementById("rAmt").value) || 0;
-  closeMod("mReminderSettings"); await generateAndShare(id, CY, activeRemMonths, 'reminder', customAmt);
+  closeMod("mReminderSettings"); generateAndShare(id, CY, activeRemMonths, 'reminder', customAmt);
+}
+
+// --- SYNCHRONOUS DATA-URL TO BLOB (Fixes iOS Share Sheet Issue) ---
+function dataURLtoFile(dataurl, filename) {
+  var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+  while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+  return new File([u8arr], filename, {type:mime});
 }
 
 // --- SHARE LEDGER RECORD (STATEMENT) ---
-async function shareRecord(id) {
+function shareRecord(id) {
   closeMod("mStudentDetails"); const s = stu(id);
   const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   const W = 800; const H = 1350; cvs.width = W; cvs.height = H;
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
+  
   ctx.fillStyle = "#EFF6FF"; ctx.save(); drawRoundRect(ctx, 40, 40, W-80, 120, 24); ctx.clip(); ctx.fillRect(40,40, W-80, 120); ctx.restore(); ctx.fillRect(40, 140, W-80, 20);
   
   ctx.fillStyle = "#0F172A"; ctx.font = "bold 28px 'DM Sans', sans-serif"; ctx.textAlign = "left"; ctx.fillText(D.cfg.name, 60, 100);
@@ -558,13 +562,16 @@ async function shareRecord(id) {
   ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif"; ctx.fillText(`Academic Year: ${VY}-${(VY+1).toString().slice(-2)}`, W-60, 130);
 
   ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "900 36px 'DM Sans', sans-serif"; ctx.fillText(s.name, 60, 220);
-  ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo | Due: ${s.due||10}th`, 60, 250);
+  ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo | Due Date: ${s.due||10}th`, 60, 250);
 
   ctx.fillStyle = "#E2E8F0"; ctx.fillRect(60, 280, W-120, 2);
+  
   ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
   ctx.fillText("MONTH", 60, 320); ctx.fillText("STATUS / DATE", 300, 320); ctx.textAlign = "right"; ctx.fillText("AMOUNT PAID", W-60, 320);
   
-  let yPos = 370; let tPaid = 0; let tPending = 0; let txtRecord = "";
+  let yPos = 370; let tPaid = 0; let tPending = 0;
+  let txtRecord = "";
+  
   for(let i=0; i<12; i++) {
     let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i);
     let p = s.payments[pk(VY,i)]; let amt = p?.amt !== undefined ? p.amt : (p?.paid ? s.fee : 0);
@@ -584,8 +591,12 @@ async function shareRecord(id) {
       ctx.fillStyle = "#EF4444"; ctx.fillText("Pending", 300, yPos);
       txtRecord += `\n- ${MN[i]}: Pending`;
     }
-    ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
-    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2); yPos += 55;
+    
+    ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
+    ctx.fillText(`Rs. ${amt}`, W-60, yPos);
+    
+    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2);
+    yPos += 55;
   }
 
   ctx.fillStyle = "#F8FAFC"; drawRoundRect(ctx, 60, yPos+20, W-120, 120, 16); ctx.fill();
@@ -598,25 +609,24 @@ async function shareRecord(id) {
   const fileName = `Statement_${s.name}_${VY}.png`;
 
   try {
-    const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
-    if(!blob) throw new Error("Blob failed");
-    const file = new File([blob], fileName, { type: "image/png" });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
-    else { throw new Error("Fallback"); }
+    const dataUrl = cvs.toDataURL("image/png");
+    const file = dataURLtoFile(dataUrl, fileName);
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { 
+      navigator.share({ files: [file], title: fileName, text: textMsg }); 
+    } else { throw new Error("Fallback"); }
   } catch (err) {
-    try {
-      const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      alert("Image downloaded! WhatsApp will open now.");
-    } catch(e) { alert("Browser security prevented image generation. Sending text only."); }
+    const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    alert("Image downloaded! WhatsApp will open now.");
     setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
 
 // --- WEB SHARE API / CANVAS LOGIC (Receipt/Reminder) ---
-async function generateAndShare(id, y, monthsArr, type, finalAmount) {
+function generateAndShare(id, y, monthsArr, type, finalAmount) {
   const s = stu(id); const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   const isReceipt = type === 'receipt';
-  const W = 800; const H = isReceipt ? 900 : 1100; cvs.width = W; cvs.height = H;
+  const W = 800; const H = isReceipt ? 900 : 1100;
+  cvs.width = W; cvs.height = H;
 
   const monthsText = monthsArr.length > 2 ? `${monthsArr.length} Months (${MN[monthsArr[0]]} - ${MN[monthsArr[monthsArr.length-1]]})` : monthsArr.map(x=>MN[x]).join(", ");
   const displayY = dispYear(y, monthsArr[monthsArr.length-1]);
@@ -624,6 +634,7 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
+
   ctx.fillStyle = isReceipt ? "#EFF6FF" : "#FEF2F2"; ctx.save(); drawRoundRect(ctx, 40, 40, W-80, 140, 24); ctx.clip(); ctx.fillRect(40,40, W-80, 140); ctx.restore(); ctx.fillRect(40, 160, W-80, 20);
 
   if(IMG_LOGO) { ctx.save(); ctx.beginPath(); ctx.arc(100, 110, 40, 0, Math.PI*2); ctx.clip(); ctx.drawImage(IMG_LOGO, 60, 70, 80, 80); ctx.restore(); }
@@ -681,16 +692,16 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   }
 
   try {
-    const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
-    if(!blob) throw new Error("Blob failed");
-    const file = new File([blob], fileName, { type: "image/png" });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
-    else { throw new Error("Fallback"); }
+    const dataUrl = cvs.toDataURL("image/png");
+    const file = dataURLtoFile(dataUrl, fileName);
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { 
+      navigator.share({ files: [file], title: fileName, text: textMsg }); 
+    } else { throw new Error("Fallback"); }
   } catch (err) {
     try {
       const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
       alert("Image downloaded! WhatsApp will open now.");
-    } catch (e) { alert("Browser security prevented image generation. Sending text only."); }
+    } catch(e) { alert("Browser security prevented image generation. Sending text only."); }
     setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }

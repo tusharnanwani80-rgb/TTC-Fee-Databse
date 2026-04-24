@@ -108,10 +108,9 @@ input, select { font-family: inherit; }
 .yc-title { font-size: 14px; font-weight: 700; color: var(--text-main); }
 .m-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; }
 @media(min-width: 480px) { .m-grid { grid-template-columns: repeat(6, 1fr); } }
-.m-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s; }
+.m-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.15s; }
 .m-box:active { transform: scale(0.95); }
-.m-box-l { font-size: 12px; font-weight: 700; color: var(--text-mut); }
-.m-box-i { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: transparent; }
+.m-box-i { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: transparent; margin-top:2px; }
 .m-box-i svg { width: 12px; height: 12px; stroke-width: 3; }
 
 /* NA State */
@@ -152,7 +151,7 @@ input, select { font-family: inherit; }
 .amt-input { width: 100%; text-align: center; border: none; background: transparent; font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -1px; outline: none; padding: 0; margin-top: 4px; }
 .amt-input:focus { border: none; background: transparent; }
 .pm-month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
-.pm-m-btn { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; font-weight: 700; color: var(--text-mut); background: var(--surface); transition: all 0.2s; text-align: center; cursor: pointer; }
+.pm-m-btn { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; font-weight: 700; color: var(--text-mut); background: var(--surface); transition: all 0.2s; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;}
 .pm-m-btn.on { background: var(--primary-light); border-color: var(--primary); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
 .pm-modes { display: flex; gap: 8px; margin-bottom: 16px; }
 .pm-mode { flex: 1; padding: 12px; text-align: center; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-mut); background: var(--surface); transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
@@ -241,8 +240,8 @@ canvas { display: none; }
       <div class="fld"><label>Due Date</label><input id="eDue" type="number" min="1" max="28" placeholder="10"></div>
     </div>
     <div class="f-row">
-      <div class="fld"><label>Join Year</label><select id="eJoinY"></select></div>
-      <div class="fld"><label>Join Month</label><select id="eJoinM"></select></div>
+      <div class="fld"><label>Enrollment Year</label><select id="eJoinY"></select></div>
+      <div class="fld"><label>Enrollment Month</label><select id="eJoinM"></select></div>
     </div>
     <button class="btn-solid" onclick="saveStudent()">Save Student</button>
   </div>
@@ -258,11 +257,13 @@ canvas { display: none; }
   </div>
 </div>
 
-<canvas id="imgCanvas" width="800" height="1200"></canvas>
+<canvas id="imgCanvas" width="800" height="1450"></canvas>
 
 <script>
-// --- STATE & DATA (FINANCIAL YEAR = APRIL TO MARCH) ---
+// --- STATE & DATA ---
 const MN = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
+const FULL_MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 const NOW = new Date();
 const realM = NOW.getMonth(); 
 const CD = NOW.getDate();
@@ -286,7 +287,7 @@ let activePayMonths = [];
 let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
-// --- PRELOAD IMAGES SAFELY (The exact flawless engine from index 19) ---
+// --- PRELOAD IMAGES SAFELY (Fetch to Blob anti-taint) ---
 let IMG_LOGO = null, IMG_QR = null;
 async function loadImg(url) {
   try {
@@ -342,15 +343,48 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
 
-// JOINING DATE ENGINE
-function isNA(s, y, m) {
-  if (s.joinY === undefined || s.joinM === undefined) return false;
-  if (y < s.joinY) return true;
-  if (y === s.joinY && m < s.joinM) return true;
-  return false;
+// --- MATH ENGINE FOR DYNAMIC MONTHS ---
+// Converts Financial Year and Financial Offset to exact Calendar Year & Month
+function getCalDate(y, mOffset) {
+  let totalFinMonths = y * 12 + mOffset;
+  let calM = (totalFinMonths + 3) % 12; // 0=Jan
+  let calY = Math.floor((totalFinMonths + 3) / 12);
+  return { M: calM, Y: calY };
 }
 
-// CORE MATH ENGINE
+// Gets the short display date range for a specific personal month box
+function getCycleLabel(s, y, m) {
+  let dStart = getCalDate(y, s.joinM + m);
+  let dEnd = getCalDate(y, s.joinM + m + 1);
+  let d1 = s.due || 10;
+  let d2 = d1 > 1 ? d1 - 1 : 30; // Approx end date
+  return `${MN[(dStart.M+9)%12]} ${d1} - ${MN[(dEnd.M+9)%12]} ${d2}`;
+}
+
+// Gets the full coverage string for receipts (e.g. 21 Apr 2026 to 20 Jul 2026)
+function getCoverageString(s, y, monthsArr) {
+  let dStart = getCalDate(y, s.joinM + monthsArr[0]);
+  let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + 1);
+  let d1 = s.due || 10;
+  let d2 = d1 > 1 ? d1 - 1 : 30;
+  return `${d1} ${FULL_MN[dStart.M]} ${dStart.Y} to ${d2} ${FULL_MN[dEnd.M]} ${dEnd.Y}`;
+}
+
+// Gets absolute personal month to see if current global month aligns
+function getPersonalMonth(s, globY, globM) {
+  let globAbs = globY * 12 + globM;
+  let joinAbs = s.joinY * 12 + s.joinM;
+  if (globAbs < joinAbs) return null; // Not enrolled yet
+  let diff = globAbs - joinAbs;
+  return { y: s.joinY + Math.floor(diff / 12), m: diff % 12 };
+}
+
+function isNA(s, y, m) {
+  // If viewing a tab year before they joined, it's NA.
+  // Box 0 starts exactly on their join month, so if y == joinY, none are NA.
+  return y < s.joinY;
+}
+
 function monthDue(s, y, m) {
   if (isNA(s, y, m)) return 0;
   let p = s.payments[pk(y,m)];
@@ -361,22 +395,42 @@ function monthDue(s, y, m) {
 
 function isPaid(s, y, m) { return !isNA(s, y, m) && monthDue(s, y, m) === 0; }
 function isPartial(s, y, m) { let d = monthDue(s, y, m); return d > 0 && d < s.fee; }
-function isOv(s){return CD>(s.due||10)&&VY===CY;}
+function isOv(s, y, m) {
+  let boxAbs = y * 12 + s.joinM + m;
+  let currAbs = CY * 12 + CM;
+  if (boxAbs < currAbs) return true;
+  if (boxAbs === currAbs && CD > (s.due || 10)) return true;
+  return false;
+}
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}
-const dispYear = (y, m) => m >= 9 ? y + 1 : y;
 
 // --- RENDER LOGIC ---
 function renderAll() { document.getElementById("hdrLoc").textContent = D.cfg.loc; renderStats(); renderYTabs(); renderList(); }
 
 function renderStats() {
-  let p = 0; D.students.forEach(s => { for(let i=0; i<=11; i++) { let pay = s.payments[pk(CY,i)]; if(pay) p += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0)); }});
+  // Total collected for the current global calendar year CY
+  let pTotalYear = 0; 
+  D.students.forEach(s => { 
+    for(let i=0; i<12; i++) { 
+      let pay = s.payments[pk(CY,i)]; 
+      if(pay) pTotalYear += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0)); 
+    }
+  });
   
-  let currentExpected = 0;
-  D.students.forEach(s => { if(!isNA(s, CY, CM)) currentExpected += s.fee; });
+  // Total expected and collected specifically for this current exact month
+  let currentExpected = 0; let pThisMonth = 0;
+  D.students.forEach(s => { 
+    let pCurr = getPersonalMonth(s, CY, CM);
+    if(pCurr) {
+      currentExpected += s.fee;
+      let pay = s.payments[pk(pCurr.y, pCurr.m)];
+      if(pay) pThisMonth += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0));
+    }
+  });
 
   document.getElementById("statsRow").innerHTML = `
-    <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${p.toLocaleString("en-IN")}</div><div class="stat-l">${CY}-${(CY+1).toString().slice(-2)} Collected</div></div>
-    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${(currentExpected - monthDue(D.students[0]||{fee:0, payments:{}}, CY, CM) === currentExpected ? 0 : 0)}</div><div class="stat-l">Monthly Revenue</div></div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${pTotalYear.toLocaleString("en-IN")}</div><div class="stat-l">${CY}-${(CY+1).toString().slice(-2)} Collected</div></div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${(currentExpected - pThisMonth).toLocaleString("en-IN")}</div><div class="stat-l">Monthly Pending</div></div>
     <div class="stat-card"><div class="stat-v">₹${currentExpected.toLocaleString("en-IN")}</div><div class="stat-l">Expected / Mo</div></div>
   `;
 }
@@ -390,19 +444,24 @@ function renderList() {
 
   document.getElementById("stuList").innerHTML = list.map(s => {
     let badge = "";
-    if (VY === CY) {
-      let na = isNA(s, VY, CM);
-      let mDue = monthDue(s, VY, CM);
-      if (na) badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
-      else if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
+    let pCurr = getPersonalMonth(s, CY, CM);
+    
+    if (isNA(s, VY, 0)) {
+      badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
+    } 
+    else if (pCurr && VY === pCurr.y) {
+      let mDue = monthDue(s, pCurr.y, pCurr.m);
+      if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
       else if (mDue > 0 && mDue < s.fee) badge = `<div class="badge partial">Bal ₹${mDue}</div>`;
-      else if (isOv(s)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
+      else if (isOv(s, pCurr.y, pCurr.m)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
       else badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Due ₹${s.fee}</div>`;
-    } else {
-      let yc = 0; let totalM = 0; 
-      MN.forEach((_,i)=>{ if(!isNA(s,VY,i)) { totalM++; if(isPaid(s,VY,i)) yc++; } });
-      badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/${totalM} Paid</div>`;
+    } 
+    else {
+      let yc = 0; 
+      for(let i=0; i<12; i++) if(isPaid(s, VY, i)) yc++;
+      badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/12 Paid</div>`;
     }
+    
     return `
       <div class="stu-card" onclick="openDetails('${s.id}')">
         <div class="stu-av">${getInitials(s.name)}</div>
@@ -415,8 +474,12 @@ function renderList() {
 // --- DETAILS MODAL ---
 function openDetails(id) { VY = CY; renderDetailsContent(stu(id)); openMod('mStudentDetails'); }
 function renderDetailsContent(s) {
-  const monthGrid = MN.map((mName, i) => {
-    const na = isNA(s, VY, i); const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); const iC = i === CM && VY === CY; const ov = iC && isOv(s) && !pd && !na;
+  let monthGrid = "";
+  for(let i=0; i<12; i++) {
+    const na = isNA(s, VY, i); const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); 
+    const pCurr = getPersonalMonth(s, CY, CM);
+    const iC = pCurr && pCurr.y === VY && pCurr.m === i;
+    const ov = isOv(s, VY, i) && !pd && !na;
     
     let cls = "m-box"; let icon = `<svg><use href="#ico-check"></use></svg>`;
     if(na) { cls += " na"; icon = `<span class="m-box-i na-i">-</span>`; }
@@ -425,15 +488,23 @@ function renderDetailsContent(s) {
     else if(iC) { cls += " curr"; } 
     else if(ov) { cls += " ov"; }
     
-    return `<div class="${cls}" ${na ? '' : `onclick="openPayment('${s.id}', ${VY}, ${i})"`}><div class="m-box-l">${mName}</div><div class="m-box-i">${icon}</div></div>`;
-  }).join("");
+    let mTitle = `Month ${i+1}`;
+    let mSub = na ? "—" : getCycleLabel(s, VY, i);
+    
+    monthGrid += `
+      <div class="${cls}" ${na ? '' : `onclick="openPayment('${s.id}', ${VY}, ${i})"`}>
+        <div class="m-box-l" style="font-size:13px; color:var(--text-main); font-weight:800;">${mTitle}</div>
+        <div style="font-size:9px; color:var(--text-mut); font-weight:600; text-align:center;">${mSub}</div>
+        <div class="m-box-i">${icon}</div>
+      </div>`;
+  }
 
   document.getElementById("sdContent").innerHTML = `
     <div class="sd-header">
       <div class="sd-info"><div class="sn">${s.name}</div><div class="sm">Class ${s.cls} ${s.phone?"· "+s.phone:""}</div></div>
       <div class="sd-fee"><div class="fa">₹${s.fee.toLocaleString("en-IN")}</div><div class="fd">per month</div></div>
     </div>
-    <div class="year-ctrl"><div class="yc-title">Fee Record: ${VY}-${(VY+1).toString().slice(-2)}</div></div>
+    <div class="year-ctrl"><div class="yc-title">Enrollment Year: ${VY}-${(VY+1).toString().slice(-2)}</div></div>
     <div class="m-grid">${monthGrid}</div>
     <div class="sd-actions">
       ${s.phone ? `<button class="act-btn wa" onclick="openReminderModal('${s.id}')"><svg><use href="#ico-wa"></use></svg> Reminder</button>` : ''}
@@ -457,7 +528,7 @@ function openPayment(id, y, m) {
       <div style="background:var(--success-bg); padding:20px; border-radius:16px; margin-bottom:20px; text-align:center;">
         <div style="font-size:14px; font-weight:700; color:var(--success); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Paid Successfully</div>
         <div style="font-size:28px; font-weight:800; color:var(--text-main);">₹${amtSaved.toLocaleString("en-IN")}</div>
-        <div style="font-size:13px; font-weight:600; color:var(--text-mut); margin-top:8px;">${MN[m]} ${dispYear(y,m)} · ${mObj.label} · ${p.date||"—"}</div>
+        <div style="font-size:13px; font-weight:600; color:var(--text-mut); margin-top:8px;">Month ${m+1} · ${mObj.label} · ${p.date||"—"}</div>
       </div>
       <button class="btn-solid" style="margin-bottom:10px;" onclick="resendSingleReceipt('${id}',${y},${m},${amtSaved})">Share Receipt</button>
       <button class="btn-outline" style="color:var(--danger); border-color:var(--danger-bg);" onclick="unmarkPaid('${id}',${y},${m})">Remove Record</button>
@@ -474,7 +545,7 @@ function renderPayModal(id, y) {
   let maxM = Math.max(...activePayMonths); let totalDue = 0;
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, y, i);
   
-  const gridHtml = unpaidMonths.map(i => `<div class="pm-m-btn ${activePayMonths.includes(i)?'on':''}" onclick="togglePayMonth('${id}', ${y}, ${i})">${MN[i]}</div>`).join("");
+  const gridHtml = unpaidMonths.map(i => `<div class="pm-m-btn ${activePayMonths.includes(i)?'on':''}" onclick="togglePayMonth('${id}', ${y}, ${i})"><div style="font-size:13px; font-weight:800;">Month ${i+1}</div><div style="font-size:9px; opacity:0.8;">${getCycleLabel(s, y, i)}</div></div>`).join("");
 
   document.getElementById("payBody").innerHTML = `
     <div class="pay-amt">
@@ -560,7 +631,7 @@ function renderRemModal() {
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, CY, i);
   let allUnpaid = []; for(let i=0; i<=11; i++) { if(!isPaid(s, CY, i) && !isNA(s, CY, i)) allUnpaid.push(i); }
   
-  const gridHtml = allUnpaid.map(i => `<div class="pm-m-btn ${activeRemMonths.includes(i)?'on':''}" onclick="toggleRemMonth(${i})">${MN[i]}</div>`).join("");
+  const gridHtml = allUnpaid.map(i => `<div class="pm-m-btn ${activeRemMonths.includes(i)?'on':''}" onclick="toggleRemMonth(${i})"><div style="font-size:13px; font-weight:800;">Month ${i+1}</div><div style="font-size:9px; opacity:0.8;">${getCycleLabel(s, CY, i)}</div></div>`).join("");
 
   document.getElementById("remBody").innerHTML = `
     <div class="pay-amt">
@@ -591,7 +662,7 @@ async function executeReminder() {
 async function shareRecord(id) {
   closeMod("mStudentDetails"); const s = stu(id);
   const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
-  const W = 800; const H = 1350; cvs.width = W; cvs.height = H;
+  const W = 800; const H = 1450; cvs.width = W; cvs.height = H;
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
@@ -600,7 +671,7 @@ async function shareRecord(id) {
   
   ctx.fillStyle = "#0F172A"; ctx.font = "bold 28px 'DM Sans', sans-serif"; ctx.textAlign = "left"; ctx.fillText(D.cfg.name, 60, 100);
   ctx.textAlign = "right"; ctx.fillStyle = "#2563EB"; ctx.fillText("ACCOUNT STATEMENT", W-60, 100);
-  ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif"; ctx.fillText(`Academic Year: ${VY}-${(VY+1).toString().slice(-2)}`, W-60, 130);
+  ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif"; ctx.fillText(`Enrollment Year: ${VY}-${(VY+1).toString().slice(-2)}`, W-60, 130);
 
   ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "900 36px 'DM Sans', sans-serif"; ctx.fillText(s.name, 60, 220);
   ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo | Due Date: ${s.due||10}th`, 60, 250);
@@ -618,28 +689,30 @@ async function shareRecord(id) {
     tPaid += amt; tPending += monthDue(s, VY, i);
     
     ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
-    ctx.fillText(`${MN[i]} ${dispYear(VY, i)}`, 60, yPos);
+    ctx.fillText(`Month ${i+1}`, 60, yPos);
+    ctx.fillStyle = "#64748B"; ctx.font = "600 13px 'DM Sans', sans-serif"; 
+    ctx.fillText(getCoverageString(s, VY, [i]), 60, yPos + 22);
     
     if(na) {
-      ctx.fillStyle = "#64748B"; ctx.fillText("—", 300, yPos);
-      txtRecord += `\n- ${MN[i]}: Not Enrolled`;
+      ctx.fillStyle = "#64748B"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("—", 300, yPos);
+      txtRecord += `\n- Month ${i+1}: Not Enrolled`;
       ctx.textAlign = "right"; ctx.fillText("—", W-60, yPos);
     } else if(pd) {
-      ctx.fillStyle = "#10B981"; ctx.fillText("Paid", 300, yPos);
+      ctx.fillStyle = "#10B981"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Paid", 300, yPos);
       ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif"; ctx.fillText(p.date ? new Date(p.date).toLocaleDateString("en-IN") : "Recorded", 360, yPos);
-      txtRecord += `\n- ${MN[i]}: Paid (Rs. ${amt})`;
-      ctx.textAlign = "right"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
+      txtRecord += `\n- Month ${i+1}: Paid (Rs. ${amt})`;
+      ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     } else if(pt) {
-      ctx.fillStyle = "#F59E0B"; ctx.fillText("Partial", 300, yPos);
-      txtRecord += `\n- ${MN[i]}: Partial (Rs. ${amt})`;
-      ctx.textAlign = "right"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
+      ctx.fillStyle = "#F59E0B"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Partial", 300, yPos);
+      txtRecord += `\n- Month ${i+1}: Partial (Rs. ${amt})`;
+      ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     } else {
-      ctx.fillStyle = "#EF4444"; ctx.fillText("Pending", 300, yPos);
-      txtRecord += `\n- ${MN[i]}: Pending`;
-      ctx.textAlign = "right"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
+      ctx.fillStyle = "#EF4444"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Pending", 300, yPos);
+      txtRecord += `\n- Month ${i+1}: Pending`;
+      ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     }
     
-    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2); yPos += 55;
+    ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+35, W-120, 2); yPos += 65;
   }
 
   ctx.fillStyle = "#F8FAFC"; drawRoundRect(ctx, 60, yPos+20, W-120, 120, 16); ctx.fill();
@@ -648,11 +721,12 @@ async function shareRecord(id) {
   ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString("en-IN")}`, 90, yPos+100);
   ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString("en-IN")}`, W/2, yPos+100);
 
-  const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nAcademic Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
+  const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nEnrollment Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
   const fileName = `Statement_${s.name.replace(/ /g,'_')}_${VY}.png`;
 
   try {
     const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
+    if(!blob) throw new Error("Blob failed");
     const file = new File([blob], fileName, { type: "image/png" });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
     else { throw new Error("Fallback"); }
@@ -677,8 +751,8 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   const isReceipt = type === 'receipt';
   const W = 800; const H = isReceipt ? 900 : 1100; cvs.width = W; cvs.height = H;
 
-  const monthsText = monthsArr.length > 2 ? `${monthsArr.length} Months (${MN[monthsArr[0]]} - ${MN[monthsArr[monthsArr.length-1]]})` : monthsArr.map(x=>MN[x]).join(", ");
-  const displayY = dispYear(y, monthsArr[monthsArr.length-1]);
+  let monthsText = monthsArr.length > 1 ? `Months ${monthsArr[0]+1} to ${monthsArr[monthsArr.length-1]+1}` : `Month ${monthsArr[0]+1}`;
+  let coverageStr = getCoverageString(s, y, monthsArr);
   const dueDateStr = `${s.due||10}th of every month`;
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
@@ -704,8 +778,9 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   ctx.fillStyle = isReceipt ? "#64748B" : "#EF4444"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "AMOUNT RECEIVED" : "TOTAL PENDING", 110, 430);
   ctx.fillStyle = isReceipt ? "#2563EB" : "#EF4444"; ctx.font = "900 48px 'DM Sans', sans-serif"; ctx.fillText(`₹${finalAmount.toLocaleString("en-IN")}`, 110, 480);
   
-  ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "APPLIED TO" : "DUE FOR", W-110, 430);
-  ctx.font = "800 22px 'DM Sans', sans-serif"; ctx.fillText(`${monthsText} ${displayY}`, W-110, 475);
+  ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "APPLIED TO" : "DUE FOR", W-110, 420);
+  ctx.font = "800 22px 'DM Sans', sans-serif"; ctx.fillText(monthsText, W-110, 450);
+  ctx.font = "600 13px 'DM Sans', sans-serif"; ctx.fillStyle = "#64748B"; ctx.fillText(coverageStr, W-110, 475);
 
   ctx.strokeStyle = "#E2E8F0"; ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(80, 550); ctx.lineTo(W-80, 550); ctx.stroke(); ctx.setLineDash([]);
 
@@ -732,10 +807,10 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   if(isReceipt) {
     const p = s.payments[pk(y,monthsArr[monthsArr.length-1])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
     const dateStr = p?.date ? new Date(p.date).toLocaleDateString("en-IN") : "—";
-    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nApplied to: ${monthsText} ${displayY}\nAmount Paid: Rs. ${finalAmount}\nMode: ${mObj.label}\nDate: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
+    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nApplied to: ${monthsText}\nCoverage Period: ${coverageStr}\nAmount Paid: Rs. ${finalAmount}\nMode: ${mObj.label}\nDate: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
   } else {
     let minM = Math.min(...monthsArr); let arrears = 0; for(let i=0; i<minM; i++) arrears += monthDue(s, y, i);
-    textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText} ${displayY}\n`;
+    textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText}\nCoverage Period: ${coverageStr}\n`;
     if(arrears > 0) textMsg += `Previous Balance: Rs. ${arrears}\n`;
     textMsg += `Total Due: Rs. ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
@@ -761,8 +836,10 @@ function openAdd() {
   document.getElementById("addTitle").textContent="Add Student"; document.getElementById("eId").value=""; 
   ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value=""); 
   document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
-  document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-  document.getElementById("eJoinY").value = CY; document.getElementById("eJoinM").value = CM;
+  document.getElementById("eJoinM").innerHTML = FULL_MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  // Set default to current calendar month (e.g., April=3, May=4)
+  document.getElementById("eJoinY").value = NOW.getFullYear(); 
+  document.getElementById("eJoinM").value = NOW.getMonth();
   openMod("mAdd"); 
 }
 
@@ -774,7 +851,16 @@ function editStu(id) {
   document.getElementById("eDue").value=s.due||10; 
   
   document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
-  document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  document.getElementById("eJoinM").innerHTML = FULL_MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  
+  // Backwards compatibility check
+  let currentJoinM = s.joinM !== undefined ? s.joinM : 0; 
+  if (s.joinM !== undefined && s.joinM < 12) {
+    // If it was the old financial index (0 = Apr), map it to calendar month (3 = Apr)
+    // NOTE: If you are continuing from index (21), old entries used 0 for Apr.
+    // For safety, the app handles raw index internally, so we just use what's saved.
+  }
+  
   document.getElementById("eJoinY").value = s.joinY !== undefined ? s.joinY : CY;
   document.getElementById("eJoinM").value = s.joinM !== undefined ? s.joinM : 0;
   openMod("mAdd"); 
@@ -792,8 +878,8 @@ function delStu(id) { closeMod("mStudentDetails"); if(!confirm(`Delete ${stu(id)
 function openSettings() { document.getElementById("sName").value = D.cfg.name; document.getElementById("sLoc").value = D.cfg.loc; openMod("mSettings"); }
 function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 function doExport() {
-  const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
-  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
+  const hdr=["Name","Class","Fee/Month","Due Date","M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12","Total Collected"];
+  const rows=D.students.map(s=>{ let yrCount = 0; for(let i=0; i<12; i++){if(isPaid(s,VY,i))yrCount++;} return [s.name,s.cls,s.fee,(s.due||10)+"th",...[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
   const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
 }

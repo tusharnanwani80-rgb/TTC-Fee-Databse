@@ -114,14 +114,18 @@ input, select { font-family: inherit; }
 .m-box-i { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: transparent; }
 .m-box-i svg { width: 12px; height: 12px; stroke-width: 3; }
 
+/* NA State */
+.m-box.na { background: var(--bg-main); border-color: var(--border); opacity: 0.6; pointer-events: none; }
+.m-box-i.na-i { border: none; font-size:14px; color:var(--text-mut); background: transparent; font-weight:800; }
+
 .m-box.paid { background: #F0FDF4; border-color: rgba(16, 185, 129, 0.3); }
 .m-box.paid .m-box-i { background: var(--success); border-color: var(--success); color: white; }
 .m-box.partial { background: var(--warning-bg); border-color: rgba(245, 158, 11, 0.3); }
 .m-box.partial .m-box-i { border-color: var(--warning); color: var(--warning); }
-.m-box.curr:not(.paid):not(.partial) { background: var(--primary-light); border-color: rgba(37,99,235,0.3); }
-.m-box.curr:not(.paid):not(.partial) .m-box-i { border-color: var(--primary); }
-.m-box.ov:not(.paid):not(.partial) { background: var(--danger-bg); border-color: rgba(239, 68, 68, 0.3); }
-.m-box.ov:not(.paid):not(.partial) .m-box-i { border-color: var(--danger); }
+.m-box.curr:not(.paid):not(.partial):not(.na) { background: var(--primary-light); border-color: rgba(37,99,235,0.3); }
+.m-box.curr:not(.paid):not(.partial):not(.na) .m-box-i { border-color: var(--primary); }
+.m-box.ov:not(.paid):not(.partial):not(.na) { background: var(--danger-bg); border-color: rgba(239, 68, 68, 0.3); }
+.m-box.ov:not(.paid):not(.partial):not(.na) .m-box-i { border-color: var(--danger); }
 
 .sd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .act-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); transition: background 0.2s; cursor: pointer; }
@@ -236,6 +240,11 @@ canvas { display: none; }
       <div class="fld"><label>WhatsApp No.</label><input id="ePhone" type="tel" placeholder="919876543210"></div>
       <div class="fld"><label>Due Date</label><input id="eDue" type="number" min="1" max="28" placeholder="10"></div>
     </div>
+    <!-- The New Joining Date Engine -->
+    <div class="f-row">
+      <div class="fld"><label>Join Year</label><select id="eJoinY"></select></div>
+      <div class="fld"><label>Join Month</label><select id="eJoinM"></select></div>
+    </div>
     <button class="btn-solid" onclick="saveStudent()">Save Student</button>
   </div>
 </div>
@@ -286,7 +295,7 @@ function loadImg(url) {
     img.crossOrigin = "anonymous"; 
     img.onload = () => res(img); 
     img.onerror = () => res(null); 
-    img.src = url; 
+    img.src = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url); 
   });
 }
 async function initImages() { IMG_LOGO = await loadImg(LOGO_URL); IMG_QR = await loadImg(QR_URL); }
@@ -328,15 +337,24 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
 
-// CORE MATH ENGINE 
+// JOINING DATE ENGINE: Check if a month is before the student's enrollment
+function isNA(s, y, m) {
+  if (s.joinY === undefined || s.joinM === undefined) return false; // Legacy fallback
+  if (y < s.joinY) return true;
+  if (y === s.joinY && m < s.joinM) return true;
+  return false;
+}
+
+// CORE MATH ENGINE (Now respects joining date)
 function monthDue(s, y, m) {
+  if (isNA(s, y, m)) return 0; // Not enrolled yet = owes nothing
   let p = s.payments[pk(y,m)];
   if (!p) return s.fee;
   if (p.amt !== undefined) return Math.max(0, s.fee - p.amt);
   return p.paid ? 0 : s.fee;
 }
 
-function isPaid(s, y, m) { return monthDue(s, y, m) === 0; }
+function isPaid(s, y, m) { return !isNA(s, y, m) && monthDue(s, y, m) === 0; }
 function isPartial(s, y, m) { let d = monthDue(s, y, m); return d > 0 && d < s.fee; }
 function isOv(s){return CD>(s.due||10)&&VY===CY;}
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}
@@ -347,11 +365,15 @@ function renderAll() { document.getElementById("hdrLoc").textContent = D.cfg.loc
 
 function renderStats() {
   let p = 0; D.students.forEach(s => { for(let i=0; i<=11; i++) { let pay = s.payments[pk(CY,i)]; if(pay) p += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0)); }});
-  const t = D.students.reduce((a,s)=>a+s.fee,0);
+  
+  // Total expected per month depends on who is enrolled this month
+  let currentExpected = 0;
+  D.students.forEach(s => { if(!isNA(s, CY, CM)) currentExpected += s.fee; });
+
   document.getElementById("statsRow").innerHTML = `
     <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${p.toLocaleString("en-IN")}</div><div class="stat-l">${CY}-${(CY+1).toString().slice(-2)} Collected</div></div>
-    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${(t-monthDue(D.students[0]||{fee:0, payments:{}}, CY, CM) === t ? 0 : 0)}</div><div class="stat-l">Monthly Revenue</div></div>
-    <div class="stat-card"><div class="stat-v">₹${t.toLocaleString("en-IN")}</div><div class="stat-l">Expected / Mo</div></div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${(currentExpected - monthDue(D.students[0]||{fee:0, payments:{}}, CY, CM) === currentExpected ? 0 : 0)}</div><div class="stat-l">Monthly Revenue</div></div>
+    <div class="stat-card"><div class="stat-v">₹${currentExpected.toLocaleString("en-IN")}</div><div class="stat-l">Expected / Mo</div></div>
   `;
 }
 
@@ -365,14 +387,17 @@ function renderList() {
   document.getElementById("stuList").innerHTML = list.map(s => {
     let badge = "";
     if (VY === CY) {
+      let na = isNA(s, VY, CM);
       let mDue = monthDue(s, VY, CM);
-      if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
+      if (na) badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
+      else if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
       else if (mDue > 0 && mDue < s.fee) badge = `<div class="badge partial">Bal ₹${mDue}</div>`;
       else if (isOv(s)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
       else badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Due ₹${s.fee}</div>`;
     } else {
-      let yc = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yc++;});
-      badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/12 Paid</div>`;
+      let yc = 0; let totalM = 0; 
+      MN.forEach((_,i)=>{ if(!isNA(s,VY,i)) { totalM++; if(isPaid(s,VY,i)) yc++; } });
+      badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/${totalM} Paid</div>`;
     }
     return `
       <div class="stu-card" onclick="openDetails('${s.id}')">
@@ -387,10 +412,16 @@ function renderList() {
 function openDetails(id) { VY = CY; renderDetailsContent(stu(id)); openMod('mStudentDetails'); }
 function renderDetailsContent(s) {
   const monthGrid = MN.map((mName, i) => {
-    const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); const iC = i === CM && VY === CY; const ov = iC && isOv(s) && !pd;
+    const na = isNA(s, VY, i); const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); const iC = i === CM && VY === CY; const ov = iC && isOv(s) && !pd && !na;
+    
     let cls = "m-box"; let icon = `<svg><use href="#ico-check"></use></svg>`;
-    if(pd) { cls += " paid"; } else if(pt) { cls += " partial"; icon = `<svg><use href="#ico-partial"></use></svg>`; } else if(iC) { cls += " curr"; } else if(ov) { cls += " ov"; }
-    return `<div class="${cls}" onclick="openPayment('${s.id}', ${VY}, ${i})"><div class="m-box-l">${mName}</div><div class="m-box-i">${icon}</div></div>`;
+    if(na) { cls += " na"; icon = `<span class="m-box-i na-i">-</span>`; }
+    else if(pd) { cls += " paid"; } 
+    else if(pt) { cls += " partial"; icon = `<svg><use href="#ico-partial"></use></svg>`; } 
+    else if(iC) { cls += " curr"; } 
+    else if(ov) { cls += " ov"; }
+    
+    return `<div class="${cls}" ${na ? '' : `onclick="openPayment('${s.id}', ${VY}, ${i})"`}><div class="m-box-l">${mName}</div><div class="m-box-i">${icon}</div></div>`;
   }).join("");
 
   document.getElementById("sdContent").innerHTML = `
@@ -434,7 +465,9 @@ function openPayment(id, y, m) {
 }
 
 function renderPayModal(id, y) {
-  const s = stu(id); const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i));
+  const s = stu(id); 
+  // Exclude NA months from being targeted
+  const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i) && !isNA(s, y, i));
   let maxM = Math.max(...activePayMonths); let totalDue = 0;
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, y, i);
   
@@ -476,7 +509,7 @@ function savePayLogic(id, y) {
   for(let i=0; i<=maxM; i++) {
     if(amtToDistribute <= 0) break;
     let mDue = monthDue(s, y, i);
-    if(mDue > 0) {
+    if(mDue > 0 && !isNA(s, y, i)) {
       monthsFunded.push(i);
       let payForThisMonth = Math.min(amtToDistribute, mDue);
       amtToDistribute -= payForThisMonth;
@@ -513,7 +546,7 @@ function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); render
 // --- SMART REMINDER MODAL ---
 function openReminderModal(id) {
   closeMod("mStudentDetails"); const s = stu(id); activeRemMonths = [];
-  for(let i=0; i<=CM; i++) { if(!isPaid(s, CY, i)) activeRemMonths.push(i); }
+  for(let i=0; i<=CM; i++) { if(!isPaid(s, CY, i) && !isNA(s, CY, i)) activeRemMonths.push(i); }
   if(activeRemMonths.length === 0) { alert(`No pending dues!`); return; }
   document.getElementById("rId").value = id; renderRemModal(); openMod("mReminderSettings");
 }
@@ -522,7 +555,7 @@ function renderRemModal() {
   const id = document.getElementById("rId").value; const s = stu(id);
   let maxM = Math.max(...activeRemMonths); let totalDue = 0;
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, CY, i);
-  let allUnpaid = []; for(let i=0; i<=11; i++) { if(!isPaid(s, CY, i)) allUnpaid.push(i); }
+  let allUnpaid = []; for(let i=0; i<=11; i++) { if(!isPaid(s, CY, i) && !isNA(s, CY, i)) allUnpaid.push(i); }
   
   const gridHtml = allUnpaid.map(i => `<div class="pm-m-btn ${activeRemMonths.includes(i)?'on':''}" onclick="toggleRemMonth(${i})">${MN[i]}</div>`).join("");
 
@@ -577,27 +610,31 @@ async function shareRecord(id) {
   let yPos = 370; let tPaid = 0; let tPending = 0; let txtRecord = "";
   
   for(let i=0; i<12; i++) {
-    let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i);
+    let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i); let na = isNA(s, VY, i);
     let p = s.payments[pk(VY,i)]; let amt = p?.amt !== undefined ? p.amt : (p?.paid ? s.fee : 0);
     tPaid += amt; tPending += monthDue(s, VY, i);
     
     ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
     ctx.fillText(`${MN[i]} ${dispYear(VY, i)}`, 60, yPos);
     
-    if(pd) {
+    if(na) {
+      ctx.fillStyle = "#64748B"; ctx.fillText("—", 300, yPos);
+      txtRecord += `\n- ${MN[i]}: Not Enrolled`;
+      ctx.textAlign = "right"; ctx.fillText("—", W-60, yPos);
+    } else if(pd) {
       ctx.fillStyle = "#10B981"; ctx.fillText("Paid", 300, yPos);
       ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif"; ctx.fillText(p.date ? new Date(p.date).toLocaleDateString("en-IN") : "Recorded", 360, yPos);
       txtRecord += `\n- ${MN[i]}: Paid (Rs. ${amt})`;
+      ctx.textAlign = "right"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     } else if(pt) {
       ctx.fillStyle = "#F59E0B"; ctx.fillText("Partial", 300, yPos);
       txtRecord += `\n- ${MN[i]}: Partial (Rs. ${amt})`;
+      ctx.textAlign = "right"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     } else {
       ctx.fillStyle = "#EF4444"; ctx.fillText("Pending", 300, yPos);
       txtRecord += `\n- ${MN[i]}: Pending`;
+      ctx.textAlign = "right"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     }
-    
-    ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
-    ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     
     ctx.fillStyle = "#F4F7FA"; ctx.fillRect(60, yPos+15, W-120, 2); yPos += 55;
   }
@@ -605,13 +642,25 @@ async function shareRecord(id) {
   ctx.fillStyle = "#F8FAFC"; drawRoundRect(ctx, 60, yPos+20, W-120, 120, 16); ctx.fill();
   ctx.textAlign = "left"; ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
   ctx.fillText("TOTAL PAID", 90, yPos+60); ctx.fillText("TOTAL PENDING", W/2, yPos+60);
-  ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString("en-IN")}`, 90, yPos+100);
-  ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString("en-IN")}`, W/2, yPos+100);
+  ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString()}`, 90, yPos+100);
+  ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString()}`, W/2, yPos+100);
 
   const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nAcademic Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
   const fileName = `Statement_${s.name.replace(/ /g,'_')}_${VY}.png`;
 
-  await exportCanvas(cvs, fileName, textMsg, s.phone);
+  try {
+    const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
+    if(!blob) throw new Error("Blob failed");
+    const file = new File([blob], fileName, { type: "image/png" });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
+    else { throw new Error("Fallback"); }
+  } catch (err) {
+    try {
+      const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      alert("Image downloaded! WhatsApp will open now.");
+    } catch(e) { alert("Browser security prevented image generation. Sending text only."); }
+    setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
+  }
 }
 
 // --- WEB SHARE API / CANVAS LOGIC (Receipt/Reminder) ---
@@ -689,44 +738,64 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
     textMsg += `Total Due: Rs. ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
 
-  await exportCanvas(cvs, fileName, textMsg, s.phone);
-}
-
-// --- BULLETPROOF CANVAS EXPORT ---
-async function exportCanvas(cvs, fileName, textMsg, phone) {
   try {
-    const dataUrl = cvs.toDataURL("image/png");
-    const blob = await (await fetch(dataUrl)).blob(); // Bulletproof Blob bypass
+    const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
+    if(!blob) throw new Error("Blob failed");
     const file = new File([blob], fileName, { type: "image/png" });
-    
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { 
-      await navigator.share({ files: [file], title: fileName, text: textMsg }); 
-    } else { throw new Error("Share API not supported"); }
+    const shareData = { files: [file], title: fileName, text: textMsg };
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); } 
+    else { throw new Error("Fallback"); }
   } catch (err) {
-    console.log("Fallback triggered:", err);
     try {
       const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      alert("Image downloaded! WhatsApp will open now. Please attach the image manually.");
-    } catch(e) { alert("Sending text only. Ensure browser allows downloads."); }
-    setTimeout(() => { window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
+      alert("Image downloaded! WhatsApp will open now.");
+    } catch(e) { alert("Browser security prevented image generation. Sending text only."); }
+    setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
 
 /* --- CRUD --- */
-function openAdd() { document.getElementById("addTitle").textContent="Add Student"; document.getElementById("eId").value=""; ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value=""); openMod("mAdd"); }
-function editStu(id) { closeMod("mStudentDetails"); const s=stu(id); document.getElementById("addTitle").textContent="Edit Details"; document.getElementById("eId").value=id; document.getElementById("eName").value=s.name; document.getElementById("eCls").value=s.cls; document.getElementById("eFee").value=s.fee; document.getElementById("ePhone").value=s.phone||""; document.getElementById("eDue").value=s.due||""; openMod("mAdd"); }
+function openAdd() { 
+  document.getElementById("addTitle").textContent="Add Student"; document.getElementById("eId").value=""; 
+  ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value=""); 
+  document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
+  document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  document.getElementById("eJoinY").value = CY; document.getElementById("eJoinM").value = CM;
+  openMod("mAdd"); 
+}
+
+function editStu(id) { 
+  closeMod("mStudentDetails"); const s=stu(id); 
+  document.getElementById("addTitle").textContent="Edit Details"; document.getElementById("eId").value=id; 
+  document.getElementById("eName").value=s.name; document.getElementById("eCls").value=s.cls; 
+  document.getElementById("eFee").value=s.fee; document.getElementById("ePhone").value=s.phone||""; 
+  document.getElementById("eDue").value=s.due||10; 
+  
+  document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
+  document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  document.getElementById("eJoinY").value = s.joinY !== undefined ? s.joinY : CY;
+  document.getElementById("eJoinM").value = s.joinM !== undefined ? s.joinM : 0;
+  openMod("mAdd"); 
+}
+
 function saveStudent() {
   const name=document.getElementById("eName").value.trim(), cls=document.getElementById("eCls").value.trim(), fee=parseInt(document.getElementById("eFee").value), phone=document.getElementById("ePhone").value.trim().replace(/\D/g,""), due=parseInt(document.getElementById("eDue").value)||10;
+  const joinY=parseInt(document.getElementById("eJoinY").value), joinM=parseInt(document.getElementById("eJoinM").value);
   if(!name||!cls||isNaN(fee)||fee<=0){alert("Name, Class, and Fee are required.");return;}
   const id=document.getElementById("eId").value;
-  if(id){ Object.assign(stu(id),{name,cls,fee,phone,due}); } else { D.students.push({id:uid(),name,cls,fee,phone,due,payments:{}}); }
+  if(id){ Object.assign(stu(id),{name,cls,fee,phone,due,joinY,joinM}); } else { D.students.push({id:uid(),name,cls,fee,phone,due,joinY,joinM,payments:{}}); }
   save(); closeMod("mAdd"); renderAll();
 }
 function delStu(id) { closeMod("mStudentDetails"); if(!confirm(`Delete ${stu(id).name}? This cannot be undone.`)) return; D.students = D.students.filter(s=>s.id!==id); save(); renderAll(); }
 function openSettings() { document.getElementById("sName").value = D.cfg.name; document.getElementById("sLoc").value = D.cfg.loc; openMod("mSettings"); }
 function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
+function doExport() {
+  const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
+  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
+  const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
+}
 
-/* --- MODAL CONTROL --- */
 function openMod(id){ document.getElementById(id).classList.add("on"); }
 function closeMod(id){ document.getElementById(id).classList.remove("on"); }
 document.querySelectorAll(".mbg").forEach(bg=>{ bg.addEventListener("click", e=>{ if(e.target===bg) bg.classList.remove("on"); }); });

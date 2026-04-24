@@ -167,7 +167,7 @@ canvas { display: none; }
 <svg style="display:none;">
   <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
   <symbol id="ico-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></symbol>
-  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
+  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
   <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></symbol>
   <symbol id="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></symbol>
   <symbol id="ico-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></symbol>
@@ -287,7 +287,7 @@ let activePayMonths = [];
 let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
-// --- PRELOAD IMAGES SAFELY (Fetch to Blob anti-taint) ---
+// --- PRELOAD IMAGES SAFELY ---
 let IMG_LOGO = null, IMG_QR = null;
 async function loadImg(url) {
   try {
@@ -301,7 +301,7 @@ async function loadImg(url) {
       img.src = objUrl;
     });
   } catch(e) {
-    return null; // Silent fail keeps canvas clean
+    return null;
   }
 }
 async function initImages() { IMG_LOGO = await loadImg(LOGO_URL); IMG_QR = await loadImg(QR_URL); }
@@ -351,17 +351,14 @@ function getCalDate(finYear, finMonthIndex) {
   return { M: calM, Y: calY };
 }
 
-// Gets the short display date range for a specific personal month box
 function getCycleLabel(s, y, m) {
   let dStart = getCalDate(y, s.joinM + m);
   let dEnd = getCalDate(y, s.joinM + m + 1);
   let d1 = s.due || 10;
-  let d2 = d1 > 1 ? d1 - 1 : 30; // Approx end date
-  // Using FULL_MN because dStart.M is native calendar (0=Jan)
+  let d2 = d1 > 1 ? d1 - 1 : 30;
   return `${FULL_MN[dStart.M]} ${d1} - ${FULL_MN[dEnd.M]} ${d2}`;
 }
 
-// Gets the full coverage string for receipts
 function getCoverageString(s, y, monthsArr) {
   let dStart = getCalDate(y, s.joinM + monthsArr[0]);
   let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + 1);
@@ -370,11 +367,10 @@ function getCoverageString(s, y, monthsArr) {
   return `${d1} ${FULL_MN[dStart.M]} ${dStart.Y} to ${d2} ${FULL_MN[dEnd.M]} ${dEnd.Y}`;
 }
 
-// Gets absolute personal month to see if current global month aligns
 function getPersonalMonth(s, globY, globM) {
   let globAbs = globY * 12 + globM;
   let joinAbs = s.joinY * 12 + s.joinM;
-  if (globAbs < joinAbs) return null; // Not enrolled yet
+  if (globAbs < joinAbs) return null;
   let diff = globAbs - joinAbs;
   return { y: s.joinY + Math.floor(diff / 12), m: diff % 12 };
 }
@@ -691,20 +687,20 @@ async function shareRecord(id) {
     
     if(na) {
       ctx.fillStyle = "#64748B"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("—", 300, yPos);
-      txtRecord += `\n- Month ${i+1}: Not Enrolled`;
+      txtRecord += `\n- *Month ${i+1}:* Not Enrolled`;
       ctx.textAlign = "right"; ctx.fillText("—", W-60, yPos);
     } else if(pd) {
       ctx.fillStyle = "#10B981"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Paid", 300, yPos);
       ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif"; ctx.fillText(p.date ? new Date(p.date).toLocaleDateString("en-IN") : "Recorded", 360, yPos);
-      txtRecord += `\n- Month ${i+1}: Paid (Rs. ${amt})`;
+      txtRecord += `\n- *Month ${i+1}:* Paid (Rs. ${amt})`;
       ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     } else if(pt) {
       ctx.fillStyle = "#F59E0B"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Partial", 300, yPos);
-      txtRecord += `\n- Month ${i+1}: Partial (Rs. ${amt})`;
+      txtRecord += `\n- *Month ${i+1}:* Partial (Rs. ${amt})`;
       ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     } else {
       ctx.fillStyle = "#EF4444"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Pending", 300, yPos);
-      txtRecord += `\n- Month ${i+1}: Pending`;
+      txtRecord += `\n- *Month ${i+1}:* Pending`;
       ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${amt}`, W-60, yPos);
     }
     
@@ -717,7 +713,7 @@ async function shareRecord(id) {
   ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString("en-IN")}`, 90, yPos+100);
   ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString("en-IN")}`, W/2, yPos+100);
 
-  const textMsg = `Account Statement\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nEnrollment Year: ${VY}-${(VY+1).toString().slice(-2)}\nMonthly Due Date: ${s.due||10}th\n\nPayment Record:${txtRecord}\n\nSummary:\nTotal Paid: Rs. ${tPaid}\nTotal Pending: Rs. ${tPending}\n\nThank you.`;
+  const textMsg = `*ACCOUNT STATEMENT*\n*${D.cfg.name}*\n\n*Student:* ${s.name} (Class ${s.cls})\n*Enrollment Year:* ${VY}-${(VY+1).toString().slice(-2)}\n*Monthly Due Date:* ${s.due||10}th\n\n*Payment Record:*${txtRecord}\n\n*Summary:*\n*Total Paid:* Rs. ${tPaid}\n*Total Pending:* Rs. ${tPending}\n\nThank you.`;
   const fileName = `Statement_${s.name.replace(/ /g,'_')}_${VY}.png`;
 
   try {
@@ -803,20 +799,19 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   if(isReceipt) {
     const p = s.payments[pk(y,monthsArr[monthsArr.length-1])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
     const dateStr = p?.date ? new Date(p.date).toLocaleDateString("en-IN") : "—";
-    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nApplied to: ${monthsText}\nCoverage Period: ${coverageStr}\nAmount Paid: Rs. ${finalAmount}\nMode: ${mObj.label}\nDate: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
+    textMsg = `*FEE RECEIPT*\n*${D.cfg.name}*\n\n*Student:* ${s.name} (Class ${s.cls})\n*Applied to:* ${monthsText}\n*Coverage Period:* ${coverageStr}\n*Amount Paid:* Rs. ${finalAmount}\n*Mode:* ${mObj.label}\n*Date:* ${dateStr}\n\n_Note: Monthly due date is the ${s.due||10}th._\n\nThank you!`;
   } else {
     let minM = Math.min(...monthsArr); let arrears = 0; for(let i=0; i<minM; i++) arrears += monthDue(s, y, i);
-    textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText}\nCoverage Period: ${coverageStr}\n`;
-    if(arrears > 0) textMsg += `Previous Balance: Rs. ${arrears}\n`;
-    textMsg += `Total Due: Rs. ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
+    textMsg = `*FEE REMINDER*\n*${D.cfg.name}*\n\nDear Parent,\nThis is a gentle reminder that the fee for *${s.name}* (Class ${s.cls}) is pending.\n\n*Due for:* ${monthsText}\n*Coverage Period:* ${coverageStr}\n`;
+    if(arrears > 0) textMsg += `*Previous Balance:* Rs. ${arrears}\n`;
+    textMsg += `*Total Due: Rs. ${finalAmount}*\n*Due Date:* ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
 
   try {
     const blob = await new Promise(res => cvs.toBlob(b => res(b), "image/png"));
     if(!blob) throw new Error("Blob failed");
     const file = new File([blob], fileName, { type: "image/png" });
-    const shareData = { files: [file], title: fileName, text: textMsg };
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); } 
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName, text: textMsg }); } 
     else { throw new Error("Fallback"); }
   } catch (err) {
     try {

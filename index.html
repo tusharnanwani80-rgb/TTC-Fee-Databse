@@ -156,7 +156,8 @@ input, select { font-family: inherit; }
 
 /* PAYMENT MODAL SPECIFICS */
 .pay-amt { text-align: center; font-size: 14px; font-weight: 600; color: var(--text-mut); margin-bottom: 20px; background: var(--bg-main); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
-.pay-amt strong { display: block; font-size: 32px; color: var(--primary); margin-top: 4px; letter-spacing: -1px; }
+.amt-input { width: 100%; text-align: center; border: none; background: transparent; font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -1px; outline: none; padding: 0; margin-top: 4px; }
+.amt-input:focus { border: none; background: transparent; }
 
 .pm-month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
 .pm-m-btn { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; font-weight: 700; color: var(--text-mut); background: var(--surface); transition: all 0.2s; text-align: center; cursor: pointer; }
@@ -217,9 +218,7 @@ canvas { display: none; }
 
 <main class="main">
   <div class="stats" id="statsRow"></div>
-  
   <div class="year-tabs" id="ytabs"></div>
-
   <div class="toolbar">
     <div class="search-box">
       <svg><use href="#ico-search"></use></svg>
@@ -227,7 +226,6 @@ canvas { display: none; }
     </div>
     <button class="btn-add" onclick="openAdd()"><svg width="18" height="18"><use href="#ico-plus"></use></svg> Add</button>
   </div>
-
   <div class="stu-list" id="stuList"></div>
 </main>
 
@@ -250,6 +248,17 @@ canvas { display: none; }
     </div>
     <input type="hidden" id="pId">
     <div id="payBody"></div>
+  </div>
+</div>
+
+<div class="mbg" id="mReminderSettings">
+  <div class="mbox" style="max-width: 400px;">
+    <div class="m-hdr">
+      <div class="m-title">Send Reminder</div>
+      <button class="btn-close" onclick="closeMod('mReminderSettings')"><svg><use href="#ico-close"></use></svg></button>
+    </div>
+    <input type="hidden" id="rId">
+    <div id="remBody"></div>
   </div>
 </div>
 
@@ -279,7 +288,6 @@ canvas { display: none; }
       <div class="m-title">Settings</div>
       <button class="btn-close" onclick="closeMod('mSettings')"><svg><use href="#ico-close"></use></svg></button>
     </div>
-    
     <div class="fld"><label>Institute Name</label><input id="sName"></div>
     <div class="fld"><label>Location / Tagline</label><input id="sLoc"></div>
     <button class="btn-solid" onclick="saveSettings()">Save Changes</button>
@@ -292,16 +300,12 @@ canvas { display: none; }
 
 <script>
 // --- STATE & DATA (FINANCIAL YEAR = APRIL TO MARCH) ---
-// Index 0 = April, Index 11 = March
 const MN = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
-const M_LETTERS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const NOW = new Date();
 const realM = NOW.getMonth(); // 0-11
 const CD = NOW.getDate();
 
-// Calculate current financial year (e.g. if Jan 2026, it is FY 2025-26 -> CY = 2025)
 const CY = realM < 3 ? NOW.getFullYear() - 1 : NOW.getFullYear();
-// Calculate current month index for the financial year array (April=0)
 const CM = (realM + 9) % 12; 
 
 const LOGO_URL="https://i.ibb.co/dsBdtCwK/Ttc-logo.png";
@@ -317,6 +321,7 @@ const DB_URL = "https://script.google.com/macros/s/AKfycbx23q-7hv2ZXazHw0RsTdi9w
 
 let VY=CY, selMode="cash";
 let activePayMonths = [];
+let activeRemMonths = [];
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
 // --- PRELOAD IMAGES ---
@@ -336,22 +341,13 @@ initImages();
 // --- CLOUD SYNC HELPERS ---
 const syncBadge = document.getElementById('syncBadge');
 const syncText = document.getElementById('syncText');
-
-function showSync(msg, color="var(--text-main)") {
-  syncText.textContent = msg;
-  syncBadge.style.background = color;
-  syncBadge.classList.add('show');
-}
-function hideSync() {
-  setTimeout(() => syncBadge.classList.remove('show'), 2000);
-}
+function showSync(msg, color="var(--text-main)") { syncText.textContent = msg; syncBadge.style.background = color; syncBadge.classList.add('show'); }
+function hideSync() { setTimeout(() => syncBadge.classList.remove('show'), 2000); }
 
 // --- DATA LOGIC ---
 async function load() {
   try { const s = localStorage.getItem("ttc_db_cloud_fy"); if(s) D = JSON.parse(s); } catch(e){}
-  
   renderAll();
-
   if(DB_URL) {
     showSync("Loading from cloud...");
     try {
@@ -361,11 +357,9 @@ async function load() {
         D = json;
         localStorage.setItem("ttc_db_cloud_fy", JSON.stringify(D)); 
         renderAll();
-        showSync("✅ Synced", "var(--success)");
+        showSync("Synced", "var(--success)");
       }
-    } catch(e) {
-      showSync("⚠️ Offline mode", "var(--warning)");
-    }
+    } catch(e) { showSync("Offline mode", "var(--warning)"); }
     hideSync();
   }
 }
@@ -373,20 +367,12 @@ async function load() {
 async function save() {
   localStorage.setItem("ttc_db_cloud_fy", JSON.stringify(D)); 
   if(!DB_URL) return; 
-  
-  showSync("⏳ Saving to cloud...");
+  showSync("Saving to cloud...");
   try {
     const payload = JSON.parse(JSON.stringify(D));
-    
-    await fetch(DB_URL, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "Content-Type": "text/plain" }
-    });
-    showSync("✅ Saved", "var(--success)");
-  } catch(e) {
-    showSync("⚠️ Save failed (Offline)", "var(--danger)");
-  }
+    await fetch(DB_URL, { method: "POST", body: JSON.stringify(payload), headers: { "Content-Type": "text/plain" } });
+    showSync("Saved", "var(--success)");
+  } catch(e) { showSync("Save failed (Offline)", "var(--danger)"); }
   hideSync();
 }
 
@@ -396,9 +382,6 @@ function pk(y,m){return y+"-"+m;}
 function paid(s,y,m){return !!(s.payments[pk(y,m)]?.paid);}
 function isOv(s){return CD>(s.due||10)&&VY===CY;}
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}
-
-// Display helper for calendar year based on financial year
-// If m >= 9 (Jan, Feb, Mar), it belongs to the next calendar year
 const dispYear = (y, m) => m >= 9 ? y + 1 : y;
 
 // --- RENDER LOGIC ---
@@ -410,7 +393,7 @@ function renderAll() {
 }
 
 function renderStats() {
-  const p = D.students.filter(s=>paid(s,CY,CM)).reduce((a,s)=>a+s.fee,0);
+  const p = D.students.filter(s=>paid(s,CY,CM)).reduce((a,s)=>a+(s.payments[pk(CY,CM)]?.amt || s.fee),0);
   const t = D.students.reduce((a,s)=>a+s.fee,0);
   document.getElementById("statsRow").innerHTML = `
     <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${p.toLocaleString("en-IN")}</div><div class="stat-l">${MN[CM]} Collected</div></div>
@@ -420,25 +403,18 @@ function renderStats() {
 }
 
 function renderYTabs(){
-  // Display FY properly (e.g. 2026-27)
-  document.getElementById("ytabs").innerHTML=
-    [CY-1, CY, CY+1].map(y => `<button class="ytab${VY===y?" on":""}" onclick="VY=${y};renderAll()">${y}-${(y+1).toString().slice(-2)}</button>`).join("");
+  document.getElementById("ytabs").innerHTML = [CY-1, CY, CY+1].map(y => `<button class="ytab${VY===y?" on":""}" onclick="VY=${y};renderAll()">${y}-${(y+1).toString().slice(-2)}</button>`).join("");
 }
 
 function renderList() {
   const q = (document.getElementById("qSearch").value||"").toLowerCase();
   const list = D.students.filter(s => !q || s.name.toLowerCase().includes(q));
-  
-  if(!list.length) {
-    document.getElementById("stuList").innerHTML = `<div style="text-align:center; padding: 40px; color:var(--text-mut); font-weight:600;">No students found.</div>`;
-    return;
-  }
+  if(!list.length) { document.getElementById("stuList").innerHTML = `<div style="text-align:center; padding: 40px; color:var(--text-mut); font-weight:600;">No students found.</div>`; return; }
 
   document.getElementById("stuList").innerHTML = list.map(s => {
     const isPd = paid(s, VY, CM);
     const isOvrdue = isOv(s) && !isPd && VY === CY;
     let badge = "";
-    
     if (VY === CY) {
       if(isPd) badge = `<div class="badge paid">Paid</div>`;
       else if(isOvrdue) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
@@ -447,104 +423,71 @@ function renderList() {
       let yc = 0; MN.forEach((_,i)=>{if(paid(s,VY,i))yc++;});
       badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/12 Paid</div>`;
     }
-
     return `
       <div class="stu-card" onclick="openDetails('${s.id}')">
         <div class="stu-av">${getInitials(s.name)}</div>
-        <div class="stu-info">
-          <div class="stu-name">${s.name}</div>
-          <div class="stu-meta">Class ${s.cls} ${s.phone?"· 📱":""}</div>
-        </div>
-        <div class="stu-status">
-          ${badge}
-        </div>
-      </div>
-    `;
+        <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">Class ${s.cls} ${s.phone?"· 📱":""}</div></div>
+        <div class="stu-status">${badge}</div>
+      </div>`;
   }).join("");
 }
 
 // --- DETAILS MODAL ---
-function openDetails(id) {
-  VY = CY; 
-  renderDetailsContent(stu(id));
-  openMod('mStudentDetails');
-}
-
+function openDetails(id) { VY = CY; renderDetailsContent(stu(id)); openMod('mStudentDetails'); }
 function renderDetailsContent(s) {
   const monthGrid = MN.map((mName, i) => {
     const pd = paid(s, VY, i);
     const iC = i === CM && VY === CY;
     const ov = iC && isOv(s) && !pd;
-    let cls = "m-box";
-    if(pd) cls += " paid";
-    else if(iC) cls += " curr";
-    else if(ov) cls += " ov";
-
-    return `
-      <div class="${cls}" onclick="openPayment('${s.id}', ${VY}, ${i})">
-        <div class="m-box-l">${mName}</div>
-        <div class="m-box-i"><svg><use href="#ico-check"></use></svg></div>
-      </div>
-    `;
+    let cls = "m-box" + (pd ? " paid" : (iC ? " curr" : (ov ? " ov" : "")));
+    return `<div class="${cls}" onclick="openPayment('${s.id}', ${VY}, ${i})"><div class="m-box-l">${mName}</div><div class="m-box-i"><svg><use href="#ico-check"></use></svg></div></div>`;
   }).join("");
 
   document.getElementById("sdContent").innerHTML = `
     <div class="sd-header">
-      <div class="sd-info">
-        <div class="sn">${s.name}</div>
-        <div class="sm">Class ${s.cls} ${s.phone?"· "+s.phone:""}</div>
-      </div>
-      <div class="sd-fee">
-        <div class="fa">₹${s.fee.toLocaleString("en-IN")}</div>
-        <div class="fd">per month</div>
-      </div>
+      <div class="sd-info"><div class="sn">${s.name}</div><div class="sm">Class ${s.cls} ${s.phone?"· "+s.phone:""}</div></div>
+      <div class="sd-fee"><div class="fa">₹${s.fee.toLocaleString("en-IN")}</div><div class="fd">per month</div></div>
     </div>
-    
-    <div class="year-ctrl">
-      <div class="yc-title">Fee Record: ${VY}-${(VY+1).toString().slice(-2)}</div>
-    </div>
-
+    <div class="year-ctrl"><div class="yc-title">Fee Record: ${VY}-${(VY+1).toString().slice(-2)}</div></div>
     <div class="m-grid">${monthGrid}</div>
-
     <div class="sd-actions">
-      ${s.phone ? `<button class="act-btn wa" onclick="sendSmartReminder('${s.id}')"><svg><use href="#ico-wa"></use></svg> Send Reminder</button>` : ''}
+      ${s.phone ? `<button class="act-btn wa" onclick="openReminderModal('${s.id}')"><svg><use href="#ico-wa"></use></svg> Send Reminder</button>` : ''}
       <button class="act-btn" onclick="editStu('${s.id}')"><svg><use href="#ico-edit"></use></svg> Edit</button>
       <button class="act-btn del" onclick="delStu('${s.id}')"><svg><use href="#ico-trash"></use></svg> Delete</button>
     </div>
   `;
 }
 
-// --- SMART PAYMENT MODAL ---
+// --- PAYMENT MODAL (PARTIAL PAYMENT ENABLED) ---
 function openPayment(id, y, m) {
-  const s = stu(id);
-  const p = s.payments[pk(y,m)];
+  const s = stu(id); const p = s.payments[pk(y,m)];
   document.getElementById("pId").value = id;
   document.getElementById("payTitle").textContent = p?.paid ? "Payment Details" : "Record Payment";
 
   if(p?.paid) {
     const mObj = MODES.find(x=>x.id===(p.mode||"cash"))||MODES[0];
+    const amtSaved = p.amt !== undefined ? p.amt : s.fee;
     document.getElementById("payBody").innerHTML = `
       <div style="background:var(--success-bg); padding:20px; border-radius:16px; margin-bottom:20px; text-align:center;">
         <div style="font-size:14px; font-weight:700; color:var(--success); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Paid Successfully</div>
-        <div style="font-size:28px; font-weight:800; color:var(--text-main);">₹${s.fee.toLocaleString("en-IN")}</div>
+        <div style="font-size:28px; font-weight:800; color:var(--text-main);">₹${amtSaved.toLocaleString("en-IN")}</div>
         <div style="font-size:13px; font-weight:600; color:var(--text-mut); margin-top:8px;">${MN[m]} ${dispYear(y,m)} · ${mObj.label} · ${p.date||"—"}</div>
         ${p.note?`<div style="font-size:13px; color:var(--text-main); margin-top:8px; font-weight:500;">Note: ${p.note}</div>`:''}
       </div>
-      <button class="btn-solid" style="margin-bottom:10px;" onclick="resendSingleReceipt('${id}',${y},${m})">
+      <button class="btn-solid" style="margin-bottom:10px;" onclick="resendSingleReceipt('${id}',${y},${m},${amtSaved})">
         <svg width="18" height="18"><use href="#ico-wa"></use></svg> Share Receipt via WA
       </button>
       <button class="btn-outline" style="color:var(--danger); border-color:var(--danger-bg);" onclick="unmarkPaid('${id}',${y},${m})">Remove Record</button>
     `;
   } else {
-    activePayMonths = [m]; 
-    renderPayModal(id, y);
+    activePayMonths = [m]; renderPayModal(id, y);
   }
   openMod("mPayment");
 }
 
 function renderPayModal(id, y) {
   const s = stu(id);
-  const totalAmt = s.fee * activePayMonths.length;
+  const totalDue = s.fee * activePayMonths.length;
   const unpaidMonths = MN.map((name, i) => i).filter(i => !paid(s, y, i));
   
   const gridHtml = unpaidMonths.map(i => {
@@ -553,22 +496,16 @@ function renderPayModal(id, y) {
   }).join("");
 
   document.getElementById("payBody").innerHTML = `
-    <div class="pay-amt">Total Amount Received <strong id="payTotalAmt">₹${totalAmt.toLocaleString("en-IN")}</strong></div>
-    
-    <div class="fld"><label>Select Months to Mark Paid</label>
-       <div class="pm-month-grid">${gridHtml}</div>
-    </div>
-
-    <div class="fld"><label>Payment Method</label>
-      <div class="pm-modes">
-        ${MODES.map(md => `
-          <button class="pm-mode ${md.id===selMode?'on':''}" onclick="setMode('${md.id}', '${id}', ${y})">
-            ${md.icon} ${md.label}
-          </button>
-        `).join('')}
+    <div class="pay-amt">
+      <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Amount Received</span>
+      <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">
+        <span style="font-size:36px; font-weight:800; color:var(--primary);">₹</span>
+        <input type="number" id="pAmt" class="amt-input" value="${totalDue}">
       </div>
     </div>
-
+    
+    <div class="fld"><label>Select Months to Mark Paid</label><div class="pm-month-grid">${gridHtml}</div></div>
+    <div class="fld"><label>Payment Method</label><div class="pm-modes">${MODES.map(md => `<button class="pm-mode ${md.id===selMode?'on':''}" onclick="setMode('${md.id}', '${id}', ${y})">${md.icon} ${md.label}</button>`).join('')}</div></div>
     <div class="f-row">
       <div class="fld"><label>Date</label><input id="pDate" type="date" value="${NOW.toISOString().slice(0,10)}"></div>
       <div class="fld"><label>Note</label><input id="pNote" placeholder="Optional"></div>
@@ -580,90 +517,78 @@ function renderPayModal(id, y) {
 }
 
 function togglePayMonth(id, y, m) {
-  if (activePayMonths.includes(m)) {
-    if(activePayMonths.length > 1) activePayMonths = activePayMonths.filter(x => x !== m); 
-  } else {
-    activePayMonths.push(m);
-    activePayMonths.sort((a,b)=>a-b);
-  }
+  if (activePayMonths.includes(m)) { if(activePayMonths.length > 1) activePayMonths = activePayMonths.filter(x => x !== m); }
+  else { activePayMonths.push(m); activePayMonths.sort((a,b)=>a-b); }
   renderPayModal(id, y);
 }
 
-function setMode(m, id, y) {
-  selMode = m;
-  renderPayModal(id, y);
-}
+function setMode(m, id, y) { selMode = m; renderPayModal(id, y); }
 
 function savePayLogic(id, y) {
-  const s = stu(id);
-  const d = document.getElementById("pDate").value;
-  const n = document.getElementById("pNote").value.trim();
+  const s = stu(id); const d = document.getElementById("pDate").value; const n = document.getElementById("pNote").value.trim();
+  const totalAmt = parseInt(document.getElementById("pAmt").value) || 0;
+  const splitAmt = Math.round(totalAmt / activePayMonths.length); // Distribute custom amount evenly
   
-  activePayMonths.forEach(m => {
-    s.payments[pk(y,m)] = { paid: true, mode: selMode, date: d, note: n };
-  });
-  save(); renderAll(); renderDetailsContent(s);
+  activePayMonths.forEach(m => { s.payments[pk(y,m)] = { paid: true, mode: selMode, date: d, note: n, amt: splitAmt }; });
+  save(); renderAll(); renderDetailsContent(s); return totalAmt;
 }
 
-function savePayOnly(id, y) {
-  savePayLogic(id, y);
-  closeMod("mPayment");
-}
+function savePayOnly(id, y) { savePayLogic(id, y); closeMod("mPayment"); }
+async function savePayAndShare(id, y) { const totalAmt = savePayLogic(id, y); closeMod("mPayment"); await generateAndShare(id, y, activePayMonths, 'receipt', totalAmt); }
+async function resendSingleReceipt(id, y, m, amtSaved) { closeMod("mPayment"); await generateAndShare(id, y, [m], 'receipt', amtSaved); }
+function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); renderAll(); renderDetailsContent(stu(id)); closeMod("mPayment"); }
 
-async function savePayAndShare(id, y) {
-  savePayLogic(id, y);
-  closeMod("mPayment");
-  await generateAndShare(id, y, activePayMonths, 'receipt');
-}
-
-async function resendSingleReceipt(id, y, m) {
-  closeMod("mPayment");
-  await generateAndShare(id, y, [m], 'receipt');
-}
-
-function unmarkPaid(id, y, m) {
-  delete stu(id).payments[pk(y,m)];
-  save(); renderAll(); renderDetailsContent(stu(id));
-  closeMod("mPayment");
-}
-
-// --- SMART REMINDER LOGIC ---
-async function sendSmartReminder(id) {
-  const s = stu(id);
-  let pendingMonths = [];
-  
-  const targetYear = CY; 
-  for(let i=0; i<=CM; i++) {
-    if(!paid(s, targetYear, i)) pendingMonths.push(i);
-  }
-  
-  if(pendingMonths.length === 0) {
-    alert(`🎉 No pending dues for ${targetYear}-${(targetYear+1).toString().slice(-2)} up to ${MN[CM]}!`);
-    return;
-  }
-  
+// --- SMART REMINDER MODAL ---
+function openReminderModal(id) {
   closeMod("mStudentDetails");
-  await generateAndShare(id, targetYear, pendingMonths, 'reminder');
+  const s = stu(id);
+  activeRemMonths = [];
+  for(let i=0; i<=CM; i++) { if(!paid(s, CY, i)) activeRemMonths.push(i); }
+  
+  if(activeRemMonths.length === 0) { alert(`No pending dues up to ${MN[CM]}!`); return; }
+  
+  document.getElementById("rId").value = id;
+  renderRemModal();
+  openMod("mReminderSettings");
 }
 
-function waBulkPending() {
-  let list = [];
-  let totalAmt = 0;
+function renderRemModal() {
+  const id = document.getElementById("rId").value;
+  const s = stu(id);
+  const totalDue = s.fee * activeRemMonths.length;
   
-  D.students.forEach(s => {
-    let pendingCount = 0;
-    for(let i=0; i<=CM; i++) { if(!paid(s, CY, i)) pendingCount++; }
-    if(pendingCount > 0) {
-      let amt = pendingCount * s.fee;
-      totalAmt += amt;
-      list.push(`${s.name} (Class ${s.cls}) — ₹${amt.toLocaleString("en-IN")} [${pendingCount} Mo]`);
-    }
-  });
+  let allUnpaid = [];
+  for(let i=0; i<=11; i++) { if(!paid(s, CY, i)) allUnpaid.push(i); }
+  
+  const gridHtml = allUnpaid.map(i => {
+    const isOn = activeRemMonths.includes(i);
+    return `<div class="pm-m-btn ${isOn?'on':''}" onclick="toggleRemMonth(${i})">${MN[i]}</div>`;
+  }).join("");
 
-  if(!list.length){ alert("🎉 All students paid up to "+MN[CM]+"!"); return; }
-  
-  const msg = `📋 *Fee Pending — Up to ${MN[CM]} ${dispYear(CY, CM)}*\n*${D.cfg.name}*\n━━━━━━━━━━\n${list.map((l,i)=>`${i+1}. ${l}`).join("\n")}\n━━━━━━━━━━\n${list.length} students · *₹${totalAmt.toLocaleString("en-IN")}* total pending`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  document.getElementById("remBody").innerHTML = `
+    <div class="pay-amt">
+      <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Remind For Amount</span>
+      <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">
+        <span style="font-size:36px; font-weight:800; color:var(--primary);">₹</span>
+        <input type="number" id="rAmt" class="amt-input" style="color:var(--danger);" value="${totalDue}">
+      </div>
+    </div>
+    <div class="fld"><label>Select Months to Remind</label><div class="pm-month-grid">${gridHtml}</div></div>
+    <button class="btn-solid" onclick="executeReminder()" style="background:#25D366; margin-top:10px;"><svg width="18" height="18"><use href="#ico-wa"></use></svg> Generate & Send Reminder</button>
+  `;
+}
+
+function toggleRemMonth(m) {
+  if (activeRemMonths.includes(m)) { if(activeRemMonths.length > 1) activeRemMonths = activeRemMonths.filter(x => x !== m); }
+  else { activeRemMonths.push(m); activeRemMonths.sort((a,b)=>a-b); }
+  renderRemModal();
+}
+
+async function executeReminder() {
+  const id = document.getElementById("rId").value;
+  const customAmt = parseInt(document.getElementById("rAmt").value) || 0;
+  closeMod("mReminderSettings");
+  await generateAndShare(id, CY, activeRemMonths, 'reminder', customAmt);
 }
 
 // --- WEB SHARE API / CANVAS LOGIC ---
@@ -673,242 +598,111 @@ function drawRoundRect(ctx, x, y, w, h, r) {
   ctx.quadraticCurveTo(x, y+h, x, y+h-r); ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
 }
 
-async function generateAndShare(id, y, monthsArr, type) {
-  const s = stu(id);
-  const cvs = document.getElementById("imgCanvas");
-  const ctx = cvs.getContext("2d");
-  
+async function generateAndShare(id, y, monthsArr, type, finalAmount) {
+  const s = stu(id); const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   const isReceipt = type === 'receipt';
-  const W = 800;
-  const H = isReceipt ? 900 : 1100;
+  const W = 800; const H = isReceipt ? 900 : 1100;
   cvs.width = W; cvs.height = H;
 
-  const totalAmt = s.fee * monthsArr.length;
-  const monthsText = monthsArr.length > 2 
-    ? `${monthsArr.length} Months (${MN[monthsArr[0]]} - ${MN[monthsArr[monthsArr.length-1]]})` 
-    : monthsArr.map(x=>MN[x]).join(", ");
-    
-  const displayY = dispYear(y, monthsArr[monthsArr.length-1]); // Base year displayed off the latest month in batch
+  const monthsText = monthsArr.length > 2 ? `${monthsArr.length} Months (${MN[monthsArr[0]]} - ${MN[monthsArr[monthsArr.length-1]]})` : monthsArr.map(x=>MN[x]).join(", ");
+  const displayY = dispYear(y, monthsArr[monthsArr.length-1]);
+  const dueDateStr = `${s.due||10}th of every month`;
 
-  // Background
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#FFFFFF"; ctx.shadowColor = "rgba(0,0,0,0.05)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill(); ctx.shadowColor = "transparent";
 
-  // Card
-  ctx.fillStyle = "#FFFFFF";
-  ctx.shadowColor = "rgba(0,0,0,0.05)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
-  drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
-  ctx.shadowColor = "transparent";
+  ctx.fillStyle = isReceipt ? "#EFF6FF" : "#FEF2F2"; ctx.save(); drawRoundRect(ctx, 40, 40, W-80, 140, 24); ctx.clip(); ctx.fillRect(40,40, W-80, 140); ctx.restore(); ctx.fillRect(40, 160, W-80, 20);
 
-  // Header Banner
-  ctx.fillStyle = isReceipt ? "#EFF6FF" : "#FEF2F2";
-  ctx.save();
-  drawRoundRect(ctx, 40, 40, W-80, 140, 24); ctx.clip(); ctx.fillRect(40,40, W-80, 140);
-  ctx.restore();
-  ctx.fillRect(40, 160, W-80, 20);
-
-  // Logo & Header Text
   if(IMG_LOGO) {
-    ctx.save(); ctx.beginPath(); ctx.arc(100, 110, 40, 0, Math.PI*2); ctx.clip();
-    ctx.drawImage(IMG_LOGO, 60, 70, 80, 80); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.arc(100, 110, 40, 0, Math.PI*2); ctx.clip(); ctx.drawImage(IMG_LOGO, 60, 70, 80, 80); ctx.restore();
     ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(100, 110, 40, 0, Math.PI*2); ctx.stroke();
   }
 
-  ctx.fillStyle = "#0F172A"; ctx.font = "bold 28px 'DM Sans', sans-serif"; ctx.textAlign = "left";
-  ctx.fillText(D.cfg.name, 160, 105);
-  ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif";
-  ctx.fillText(D.cfg.loc, 160, 135);
+  ctx.fillStyle = "#0F172A"; ctx.font = "bold 28px 'DM Sans', sans-serif"; ctx.textAlign = "left"; ctx.fillText(D.cfg.name, 160, 105);
+  ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif"; ctx.fillText(D.cfg.loc, 160, 135);
 
-  ctx.textAlign = "right";
-  ctx.fillStyle = isReceipt ? "#2563EB" : "#EF4444"; ctx.font = "800 24px 'DM Sans', sans-serif";
+  ctx.textAlign = "right"; ctx.fillStyle = isReceipt ? "#2563EB" : "#EF4444"; ctx.font = "800 24px 'DM Sans', sans-serif";
   ctx.fillText(isReceipt ? "FEE RECEIPT" : "FEE REMINDER", W-60, 105);
   ctx.fillStyle = isReceipt ? "#64748B" : "#EF4444"; ctx.font = "600 14px 'DM Sans', sans-serif";
-  if(isReceipt) {
-    ctx.fillText(`No. TTC-${y}${String(monthsArr[0]+1).padStart(2,"0")}-${id.slice(-4).toUpperCase()}`, W-60, 135);
-  } else {
-    ctx.fillText("ACTION REQUIRED", W-60, 135);
-  }
+  if(isReceipt) ctx.fillText(`No. TTC-${y}${String(monthsArr[0]+1).padStart(2,"0")}-${id.slice(-4).toUpperCase()}`, W-60, 135);
+  else ctx.fillText("ACTION REQUIRED", W-60, 135);
 
-  // Student Details
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.letterSpacing = "1px";
-  ctx.fillText("STUDENT DETAILS", 80, 240);
-  ctx.fillStyle = "#0F172A"; ctx.font = "900 40px 'DM Sans', sans-serif"; ctx.letterSpacing = "-1px";
-  ctx.fillText(s.name, 80, 290);
-  ctx.fillStyle = "#64748B"; ctx.font = "600 20px 'DM Sans', sans-serif";
-  ctx.fillText(`Class ${s.cls}`, 80, 325);
+  ctx.textAlign = "left"; ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.letterSpacing = "1px"; ctx.fillText("STUDENT DETAILS", 80, 240);
+  ctx.fillStyle = "#0F172A"; ctx.font = "900 40px 'DM Sans', sans-serif"; ctx.letterSpacing = "-1px"; ctx.fillText(s.name, 80, 290);
+  ctx.fillStyle = "#64748B"; ctx.font = "600 20px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls}`, 80, 325);
 
-  // Main Info Box
-  ctx.fillStyle = isReceipt ? "#F8FAFC" : "#FEF2F2";
-  drawRoundRect(ctx, 80, 380, W-160, 120, 20); ctx.fill();
+  ctx.fillStyle = isReceipt ? "#F8FAFC" : "#FEF2F2"; drawRoundRect(ctx, 80, 380, W-160, 120, 20); ctx.fill();
+  ctx.fillStyle = isReceipt ? "#64748B" : "#EF4444"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "AMOUNT PAID" : "TOTAL PENDING", 110, 430);
+  ctx.fillStyle = isReceipt ? "#2563EB" : "#EF4444"; ctx.font = "900 48px 'DM Sans', sans-serif"; ctx.fillText(`₹${finalAmount.toLocaleString("en-IN")}`, 110, 480);
+  ctx.textAlign = "right"; ctx.fillStyle = "#0F172A"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText(isReceipt ? "BILLING CYCLE" : "DUE FOR", W-110, 430);
+  ctx.font = "800 22px 'DM Sans', sans-serif"; ctx.fillText(`${monthsText} ${displayY}`, W-110, 475);
 
-  ctx.fillStyle = isReceipt ? "#64748B" : "#EF4444"; ctx.font = "bold 14px 'DM Sans', sans-serif";
-  ctx.fillText(isReceipt ? "AMOUNT PAID" : "TOTAL PENDING", 110, 430);
-  ctx.fillStyle = isReceipt ? "#2563EB" : "#EF4444"; ctx.font = "900 48px 'DM Sans', sans-serif";
-  ctx.fillText(`₹${totalAmt.toLocaleString("en-IN")}`, 110, 480);
+  ctx.strokeStyle = "#E2E8F0"; ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(80, 550); ctx.lineTo(W-80, 550); ctx.stroke(); ctx.setLineDash([]);
 
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#0F172A"; ctx.font = "bold 14px 'DM Sans', sans-serif";
-  ctx.fillText(isReceipt ? "BILLING CYCLE" : "DUE FOR", W-110, 430);
-  ctx.font = "800 22px 'DM Sans', sans-serif";
-  ctx.fillText(`${monthsText} ${displayY}`, W-110, 475);
-
-  // Line
-  ctx.strokeStyle = "#E2E8F0"; ctx.lineWidth = 2; ctx.setLineDash([8,8]);
-  ctx.beginPath(); ctx.moveTo(80, 550); ctx.lineTo(W-80, 550); ctx.stroke(); ctx.setLineDash([]);
-
-  // Bottom Content
   if (isReceipt) {
-    const p = s.payments[pk(y,monthsArr[0])];
-    const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
+    const p = s.payments[pk(y,monthsArr[0])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
+    ctx.textAlign = "left"; ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText("PAYMENT DATE", 80, 620); ctx.fillText("METHOD", W/2, 620);
+    ctx.fillStyle = "#0F172A"; ctx.font = "700 20px 'DM Sans', sans-serif"; ctx.fillText(p?.date ? new Date(p.date+`T00:00:00`).toLocaleDateString("en-IN") : "—", 80, 650); ctx.fillText(mObj.label, W/2, 650);
+    ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif"; ctx.fillText("DUE DATE", 80, 710); if(p?.note) ctx.fillText("NOTE", W/2, 710);
+    ctx.fillStyle = "#0F172A"; ctx.font = "700 20px 'DM Sans', sans-serif"; ctx.fillText(dueDateStr, 80, 740); if(p?.note) ctx.fillText(p.note, W/2, 740);
     
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#64748B"; ctx.font = "bold 14px 'DM Sans', sans-serif";
-    ctx.fillText("PAYMENT DATE", 80, 620);
-    ctx.fillText("METHOD", W/2, 620);
-    
-    ctx.fillStyle = "#0F172A"; ctx.font = "700 20px 'DM Sans', sans-serif";
-    ctx.fillText(p?.date ? new Date(p.date+`T00:00:00`).toLocaleDateString("en-IN") : "—", 80, 650);
-    ctx.fillText(mObj.label, W/2, 650);
-
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#10B981"; ctx.font = "800 20px 'DM Sans', sans-serif";
-    ctx.fillText("Payment Successful", W/2, 760);
-    ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif";
-    ctx.fillText("This is a digitally generated receipt.", W/2, 790);
-
+    ctx.textAlign = "center"; ctx.fillStyle = "#10B981"; ctx.font = "800 20px 'DM Sans', sans-serif"; ctx.fillText("Payment Successful", W/2, 820);
+    ctx.fillStyle = "#64748B"; ctx.font = "500 14px 'DM Sans', sans-serif"; ctx.fillText("This is a digitally generated receipt.", W/2, 850);
   } else {
-    // Reminder has QR
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#0F172A"; ctx.font = "800 20px 'DM Sans', sans-serif";
-    ctx.fillText("Scan to pay instantly via UPI", W/2, 620);
-    
-    if(IMG_QR) {
-      ctx.drawImage(IMG_QR, (W/2)-150, 660, 300, 300);
-    } else {
-      ctx.fillStyle = "#E2E8F0"; drawRoundRect(ctx, (W/2)-150, 660, 300, 300, 16); ctx.fill();
-    }
+    ctx.textAlign = "center"; ctx.fillStyle = "#EF4444"; ctx.font = "800 20px 'DM Sans', sans-serif"; ctx.fillText(`Due Date: ${dueDateStr}`, W/2, 610);
+    ctx.fillStyle = "#0F172A"; ctx.font = "700 18px 'DM Sans', sans-serif"; ctx.fillText("Scan to pay instantly via UPI", W/2, 660);
+    if(IMG_QR) ctx.drawImage(IMG_QR, (W/2)-150, 690, 300, 300); else { ctx.fillStyle = "#E2E8F0"; drawRoundRect(ctx, (W/2)-150, 690, 300, 300, 16); ctx.fill(); }
   }
 
-  // --- SHARE VIA NATIVE WEB SHARE API (Bulletproof Fallback) ---
   const fileName = isReceipt ? `Receipt_${s.name}_${monthsText.replace(/ /g,'_')}.png` : `Reminder_${s.name}_${monthsText.replace(/ /g,'_')}.png`;
   let textMsg = "";
   if(isReceipt) {
-    const p = s.payments[pk(y,monthsArr[0])];
-    const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
-    textMsg = `*Fee Receipt*\n${D.cfg.name}\n\n👤 *${s.name}* (Class ${s.cls})\n📅 Billing Cycle: *${monthsText} ${displayY}*\n💰 Total Paid: *₹${totalAmt.toLocaleString("en-IN")}*\n✅ Mode: ${mObj.label}\n\nThank you! 🙏`;
+    const p = s.payments[pk(y,monthsArr[0])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
+    const dateStr = p?.date ? new Date(p.date+`T00:00:00`).toLocaleDateString("en-IN") : "—";
+    textMsg = `Fee Receipt\n${D.cfg.name}\n\nStudent: ${s.name} (Class ${s.cls})\nBilling Cycle: ${monthsText} ${displayY}\nAmount Paid: Rs ${finalAmount}\nMode: ${mObj.label}\nPayment Date: ${dateStr}\n\nNote: Monthly due date is the ${s.due||10}th.\n\nThank you!`;
   } else {
-    textMsg = `*Fee Reminder ⚠️*\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for *${s.name}* (Class ${s.cls}) is pending.\n\n📅 Due for: *${monthsText} ${displayY}*\n💰 Total Due: *₹${totalAmt.toLocaleString("en-IN")}*\n⏰ Due Date: ${s.due||10}th\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\nThank you! 🙏`;
+    textMsg = `Fee Reminder\n${D.cfg.name}\n\nDear Parent,\nThis is a gentle reminder that the fee for ${s.name} (Class ${s.cls}) is pending.\n\nDue for: ${monthsText} ${displayY}\nTotal Due: Rs ${finalAmount}\nDue Date: ${s.due||10}th of the month\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
 
   try {
     const blob = await new Promise(resolve => cvs.toBlob(resolve, "image/png"));
-    if (!blob) throw new Error("Blob generation failed.");
-
     const file = new File([blob], fileName, { type: "image/png" });
     const shareData = { files: [file], title: fileName, text: textMsg };
-
-    // Try Native App Sharing
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-      await navigator.share(shareData);
-    } else {
-      throw new Error("Web Share API not supported on this device/browser.");
-    }
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) { await navigator.share(shareData); } 
+    else { throw new Error("Fallback"); }
   } catch (err) {
-    console.log("Share Fallback triggered:", err);
-    
-    // Fallback for Desktop Browsers / iFrames
-    const dataUrl = cvs.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
+    const a = document.createElement("a"); a.href = cvs.toDataURL("image/png"); a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
     alert("Image downloaded! WhatsApp will open now. Please attach the image manually.");
-    setTimeout(() => {
-      window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank");
-    }, 500);
+    setTimeout(() => { window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(textMsg)}`, "_blank"); }, 500);
   }
 }
 
 /* --- CRUD --- */
-function openAdd() {
-  document.getElementById("addTitle").textContent="Add Student";
-  document.getElementById("eId").value="";
-  ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value="");
-  openMod("mAdd");
-}
-
-function editStu(id) {
-  closeMod("mStudentDetails");
-  const s=stu(id);
-  document.getElementById("addTitle").textContent="Edit Details";
-  document.getElementById("eId").value=id;
-  document.getElementById("eName").value=s.name;
-  document.getElementById("eCls").value=s.cls;
-  document.getElementById("eFee").value=s.fee;
-  document.getElementById("ePhone").value=s.phone||"";
-  document.getElementById("eDue").value=s.due||"";
-  openMod("mAdd");
-}
-
+function openAdd() { document.getElementById("addTitle").textContent="Add Student"; document.getElementById("eId").value=""; ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value=""); openMod("mAdd"); }
+function editStu(id) { closeMod("mStudentDetails"); const s=stu(id); document.getElementById("addTitle").textContent="Edit Details"; document.getElementById("eId").value=id; document.getElementById("eName").value=s.name; document.getElementById("eCls").value=s.cls; document.getElementById("eFee").value=s.fee; document.getElementById("ePhone").value=s.phone||""; document.getElementById("eDue").value=s.due||""; openMod("mAdd"); }
 function saveStudent() {
-  const name=document.getElementById("eName").value.trim();
-  const cls=document.getElementById("eCls").value.trim();
-  const fee=parseInt(document.getElementById("eFee").value);
-  const phone=document.getElementById("ePhone").value.trim().replace(/\D/g,"");
-  const due=parseInt(document.getElementById("eDue").value)||10;
-  
+  const name=document.getElementById("eName").value.trim(), cls=document.getElementById("eCls").value.trim(), fee=parseInt(document.getElementById("eFee").value), phone=document.getElementById("ePhone").value.trim().replace(/\D/g,""), due=parseInt(document.getElementById("eDue").value)||10;
   if(!name||!cls||isNaN(fee)||fee<=0){alert("Name, Class, and Fee are required.");return;}
-  
   const id=document.getElementById("eId").value;
-  if(id){ Object.assign(stu(id),{name,cls,fee,phone,due}); }
-  else { D.students.push({id:uid(),name,cls,fee,phone,due,payments:{}}); }
-  
+  if(id){ Object.assign(stu(id),{name,cls,fee,phone,due}); } else { D.students.push({id:uid(),name,cls,fee,phone,due,payments:{}}); }
   save(); closeMod("mAdd"); renderAll();
 }
-
-function delStu(id) {
-  closeMod("mStudentDetails");
-  if(!confirm(`Delete ${stu(id).name}? This cannot be undone.`)) return;
-  D.students = D.students.filter(s=>s.id!==id);
-  save(); renderAll();
-}
-
-function openSettings() {
-  document.getElementById("sName").value = D.cfg.name;
-  document.getElementById("sLoc").value = D.cfg.loc;
-  openMod("mSettings");
-}
-
-function saveSettings() {
-  D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes";
-  D.cfg.loc = document.getElementById("sLoc").value.trim();
-  
-  save(); closeMod("mSettings"); renderAll();
-}
-
+function delStu(id) { closeMod("mStudentDetails"); if(!confirm(`Delete ${stu(id).name}? This cannot be undone.`)) return; D.students = D.students.filter(s=>s.id!==id); save(); renderAll(); }
+function openSettings() { document.getElementById("sName").value = D.cfg.name; document.getElementById("sLoc").value = D.cfg.loc; openMod("mSettings"); }
+function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 function doExport() {
   const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
-  const rows=D.students.map(s=>{
-    let yrCount = 0; MN.forEach((_,i)=>{if(paid(s,VY,i))yrCount++;});
-    return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>paid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee];
-  });
+  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(paid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>paid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
   const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-  a.download=`TTC_Fee_${VY}.csv`; a.click();
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
 }
 
-/* --- MODAL CONTROL --- */
 function openMod(id){ document.getElementById(id).classList.add("on"); }
 function closeMod(id){ document.getElementById(id).classList.remove("on"); }
-document.querySelectorAll(".mbg").forEach(bg=>{
-  bg.addEventListener("click", e=>{ if(e.target===bg) bg.classList.remove("on"); });
-});
+document.querySelectorAll(".mbg").forEach(bg=>{ bg.addEventListener("click", e=>{ if(e.target===bg) bg.classList.remove("on"); }); });
 
-load(); // Load triggers renderAll
+load(); 
 </script>
 </body>
 </html>

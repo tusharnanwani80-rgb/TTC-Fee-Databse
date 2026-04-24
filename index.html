@@ -834,7 +834,7 @@ async function generateAndShare(id, y, monthsArr, type) {
 
 /* --- CRUD --- */
 function openAdd() {
-  document.getElementById("mStudentTitle").textContent="Add Student";
+  document.getElementById("addTitle").textContent="Add Student";
   document.getElementById("eId").value="";
   ["eName","ePhone","eFee","eDue","eCls"].forEach(i=>document.getElementById(i).value="");
   openMod("mAdd");
@@ -843,7 +843,7 @@ function openAdd() {
 function editStu(id) {
   closeMod("mStudentDetails");
   const s=stu(id);
-  document.getElementById("mStudentTitle").textContent="Edit Details";
+  document.getElementById("addTitle").textContent="Edit Details";
   document.getElementById("eId").value=id;
   document.getElementById("eName").value=s.name;
   document.getElementById("eCls").value=s.cls;

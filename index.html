@@ -351,19 +351,38 @@ function getCalDate(finYear, finMonthIndex) {
   return { M: calM, Y: calY };
 }
 
+// FORMATTING HELPERS
+function getEffDue(s) {
+  // If user inputs 1, they expect it to be due at the end of the month (30th)
+  return (s.due == 1) ? 30 : (s.due || 10);
+}
+
+function getEffDueStr(s) {
+  let d = getEffDue(s);
+  if (d > 3 && d < 21) return d + 'th';
+  switch (d % 10) {
+    case 1:  return d + "st";
+    case 2:  return d + "nd";
+    case 3:  return d + "rd";
+    default: return d + "th";
+  }
+}
+
 function getCycleLabel(s, y, m) {
   let dStart = getCalDate(y, s.joinM + m);
-  let dEnd = getCalDate(y, s.joinM + m + 1);
   let d1 = s.due || 10;
   let d2 = d1 > 1 ? d1 - 1 : 30;
+  let endOffset = d1 == 1 ? 0 : 1; // If 1st, cycle ends in the SAME month
+  let dEnd = getCalDate(y, s.joinM + m + endOffset);
   return `${FULL_MN[dStart.M]} ${d1} - ${FULL_MN[dEnd.M]} ${d2}`;
 }
 
 function getCoverageString(s, y, monthsArr) {
   let dStart = getCalDate(y, s.joinM + monthsArr[0]);
-  let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + 1);
   let d1 = s.due || 10;
   let d2 = d1 > 1 ? d1 - 1 : 30;
+  let endOffset = d1 == 1 ? 0 : 1; // If 1st, cycle ends in the SAME month
+  let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + endOffset);
   return `${d1} ${FULL_MN[dStart.M]} ${dStart.Y} to ${d2} ${FULL_MN[dEnd.M]} ${dEnd.Y}`;
 }
 
@@ -393,7 +412,8 @@ function isOv(s, y, m) {
   let boxAbs = y * 12 + s.joinM + m;
   let currAbs = CY * 12 + CM;
   if (boxAbs < currAbs) return true;
-  if (boxAbs === currAbs && CD > (s.due || 10)) return true;
+  // Use the effective due date logic to handle the edge case perfectly
+  if (boxAbs === currAbs && CD > getEffDue(s)) return true;
   return false;
 }
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}
@@ -666,7 +686,7 @@ async function shareRecord(id) {
   ctx.fillStyle = "#64748B"; ctx.font = "600 16px 'DM Sans', sans-serif"; ctx.fillText(`Enrollment Year: ${VY}-${(VY+1).toString().slice(-2)}`, W-60, 130);
 
   ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "900 36px 'DM Sans', sans-serif"; ctx.fillText(s.name, 60, 220);
-  ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo | Due Date: ${s.due||10}th`, 60, 250);
+  ctx.fillStyle = "#64748B"; ctx.font = "600 18px 'DM Sans', sans-serif"; ctx.fillText(`Class ${s.cls} | Fee: Rs. ${s.fee}/mo | Due Date: ${getEffDueStr(s)}`, 60, 250);
 
   ctx.fillStyle = "#E2E8F0"; ctx.fillRect(60, 280, W-120, 2);
   
@@ -713,7 +733,7 @@ async function shareRecord(id) {
   ctx.fillStyle = "#10B981"; ctx.font = "900 32px 'DM Sans', sans-serif"; ctx.fillText(`Rs. ${tPaid.toLocaleString("en-IN")}`, 90, yPos+100);
   ctx.fillStyle = "#EF4444"; ctx.fillText(`Rs. ${tPending.toLocaleString("en-IN")}`, W/2, yPos+100);
 
-  const textMsg = `*ACCOUNT STATEMENT*\n*${D.cfg.name}*\n\n*Student:* ${s.name} (Class ${s.cls})\n*Enrollment Year:* ${VY}-${(VY+1).toString().slice(-2)}\n*Monthly Due Date:* ${s.due||10}th\n\n*Payment Record:*${txtRecord}\n\n*Summary:*\n*Total Paid:* Rs. ${tPaid}\n*Total Pending:* Rs. ${tPending}\n\n_Note: This is a computerised digital statement created automatically._\n\nThank you.`;
+  const textMsg = `*ACCOUNT STATEMENT*\n*${D.cfg.name}*\n\n*Student:* ${s.name} (Class ${s.cls})\n*Enrollment Year:* ${VY}-${(VY+1).toString().slice(-2)}\n*Monthly Due Date:* ${getEffDueStr(s)}\n\n*Payment Record:*${txtRecord}\n\n*Summary:*\n*Total Paid:* Rs. ${tPaid}\n*Total Pending:* Rs. ${tPending}\n\n_Note: This is a computerised digital statement created automatically._\n\nThank you.`;
   const fileName = `Statement_${s.name.replace(/ /g,'_')}_${VY}.png`;
 
   try {
@@ -745,7 +765,7 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
 
   let monthsText = monthsArr.length > 1 ? `Months ${monthsArr[0]+1} to ${monthsArr[monthsArr.length-1]+1}` : `Month ${monthsArr[0]+1}`;
   let coverageStr = getCoverageString(s, y, monthsArr);
-  const dueDateStr = `${s.due||10}th of every month`;
+  const dueDateStr = `${getEffDueStr(s)} of every month`;
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
@@ -799,12 +819,12 @@ async function generateAndShare(id, y, monthsArr, type, finalAmount) {
   if(isReceipt) {
     const p = s.payments[pk(y,monthsArr[monthsArr.length-1])]; const mObj = MODES.find(x=>x.id===(p?.mode||"cash"))||MODES[0];
     const dateStr = p?.date ? new Date(p.date).toLocaleDateString("en-IN") : "—";
-    textMsg = `*FEE RECEIPT*\n*${D.cfg.name}*\n\n*Student:* ${s.name} (Class ${s.cls})\n*Applied to:* ${monthsText}\n*Coverage Period:* ${coverageStr}\n*Amount Paid:* Rs. ${finalAmount}\n*Mode:* ${mObj.label}\n*Date:* ${dateStr}\n\n_Note: This is an automated system receipt. Monthly due date is the ${s.due||10}th._\n\nThank you!`;
+    textMsg = `*FEE RECEIPT*\n*${D.cfg.name}*\n\n*Student:* ${s.name} (Class ${s.cls})\n*Applied to:* ${monthsText}\n*Coverage Period:* ${coverageStr}\n*Amount Paid:* Rs. ${finalAmount}\n*Mode:* ${mObj.label}\n*Date:* ${dateStr}\n\n_Note: This is an automated system receipt. Monthly due date is the ${getEffDueStr(s)}._\n\nThank you!`;
   } else {
     let minM = Math.min(...monthsArr); let arrears = 0; for(let i=0; i<minM; i++) arrears += monthDue(s, y, i);
     textMsg = `*FEE REMINDER*\n*${D.cfg.name}*\n\nDear Parent,\nThis is a gentle reminder that the fee for *${s.name}* (Class ${s.cls}) is pending.\n\n*Due for:* ${monthsText}\n*Coverage Period:* ${coverageStr}\n`;
     if(arrears > 0) textMsg += `*Previous Balance:* Rs. ${arrears}\n`;
-    textMsg += `*Total Due: Rs. ${finalAmount}*\n*Due Date:* ${s.due||10}th of the month\n\n_Note: This is an automated system reminder. If you have already cleared your dues today, please ignore this message._\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
+    textMsg += `*Total Due: Rs. ${finalAmount}*\n*Due Date:* ${getEffDueStr(s)} of the month\n\n_Note: This is an automated system reminder. If you have already cleared your dues today, please ignore this message._\n\nPlease find the QR code attached. Kindly clear the dues at the earliest.\n\nThank you.`;
   }
 
   try {
@@ -861,7 +881,7 @@ function openSettings() { document.getElementById("sName").value = D.cfg.name; d
 function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 function doExport() {
   const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
-  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,(s.due||10)+"th",...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
+  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,getEffDueStr(s),...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
   const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
 }

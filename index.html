@@ -352,9 +352,11 @@ function getCalDate(finYear, finMonthIndex) {
 }
 
 // FORMATTING HELPERS
+
+// ** THE ULTRATHINK FIX 1: Exact End-of-Cycle calculation **
 function getEffDue(s) {
-  // If user inputs 1, they expect it to be due at the end of the month (30th)
-  return (s.due == 1) ? 30 : (s.due || 10);
+  let d = s.due || 10;
+  return d > 1 ? d - 1 : 30;
 }
 
 function getEffDueStr(s) {
@@ -408,12 +410,17 @@ function monthDue(s, y, m) {
 
 function isPaid(s, y, m) { return !isNA(s, y, m) && monthDue(s, y, m) === 0; }
 function isPartial(s, y, m) { let d = monthDue(s, y, m); return d > 0 && d < s.fee; }
+
+// ** THE ULTRATHINK FIX 2: Due-Month Shift Offset **
 function isOv(s, y, m) {
   let boxAbs = y * 12 + s.joinM + m;
+  let d1 = s.due || 10;
+  let endOffset = d1 == 1 ? 0 : 1; // Due date falls into the next calendar month if join date > 1
+  let dueMonthAbs = boxAbs + endOffset; 
   let currAbs = CY * 12 + CM;
-  if (boxAbs < currAbs) return true;
-  // Use the effective due date logic to handle the edge case perfectly
-  if (boxAbs === currAbs && CD > getEffDue(s)) return true;
+  
+  if (currAbs > dueMonthAbs) return true;
+  if (currAbs === dueMonthAbs && CD > getEffDue(s)) return true;
   return false;
 }
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}

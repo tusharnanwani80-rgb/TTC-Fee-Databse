@@ -167,7 +167,7 @@ canvas { display: none; }
 <svg style="display:none;">
   <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
   <symbol id="ico-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></symbol>
-  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
+  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
   <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></symbol>
   <symbol id="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></symbol>
   <symbol id="ico-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></symbol>
@@ -352,8 +352,6 @@ function getCalDate(finYear, finMonthIndex) {
 }
 
 // FORMATTING HELPERS
-
-// ** THE ULTRATHINK FIX 1: Exact End-of-Cycle calculation **
 function getEffDue(s) {
   let d = s.due || 10;
   return d > 1 ? d - 1 : 30;
@@ -374,7 +372,7 @@ function getCycleLabel(s, y, m) {
   let dStart = getCalDate(y, s.joinM + m);
   let d1 = s.due || 10;
   let d2 = d1 > 1 ? d1 - 1 : 30;
-  let endOffset = d1 == 1 ? 0 : 1; // If 1st, cycle ends in the SAME month
+  let endOffset = d1 == 1 ? 0 : 1; 
   let dEnd = getCalDate(y, s.joinM + m + endOffset);
   return `${FULL_MN[dStart.M]} ${d1} - ${FULL_MN[dEnd.M]} ${d2}`;
 }
@@ -383,7 +381,7 @@ function getCoverageString(s, y, monthsArr) {
   let dStart = getCalDate(y, s.joinM + monthsArr[0]);
   let d1 = s.due || 10;
   let d2 = d1 > 1 ? d1 - 1 : 30;
-  let endOffset = d1 == 1 ? 0 : 1; // If 1st, cycle ends in the SAME month
+  let endOffset = d1 == 1 ? 0 : 1; 
   let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + endOffset);
   return `${d1} ${FULL_MN[dStart.M]} ${dStart.Y} to ${d2} ${FULL_MN[dEnd.M]} ${dEnd.Y}`;
 }
@@ -396,8 +394,15 @@ function getPersonalMonth(s, globY, globM) {
   return { y: s.joinY + Math.floor(diff / 12), m: diff % 12 };
 }
 
+// CYCLE DELETION ENGINE
+function isDropped(s, y, m) {
+  return s.dropped && s.dropped.includes(pk(y, m));
+}
+
 function isNA(s, y, m) {
-  return y < s.joinY;
+  if (y < s.joinY) return true;
+  if (isDropped(s, y, m)) return true;
+  return false;
 }
 
 function monthDue(s, y, m) {
@@ -411,11 +416,10 @@ function monthDue(s, y, m) {
 function isPaid(s, y, m) { return !isNA(s, y, m) && monthDue(s, y, m) === 0; }
 function isPartial(s, y, m) { let d = monthDue(s, y, m); return d > 0 && d < s.fee; }
 
-// ** THE ULTRATHINK FIX 2: Due-Month Shift Offset **
 function isOv(s, y, m) {
   let boxAbs = y * 12 + s.joinM + m;
   let d1 = s.due || 10;
-  let endOffset = d1 == 1 ? 0 : 1; // Due date falls into the next calendar month if join date > 1
+  let endOffset = d1 == 1 ? 0 : 1; 
   let dueMonthAbs = boxAbs + endOffset; 
   let currAbs = CY * 12 + CM;
   
@@ -441,7 +445,7 @@ function renderStats() {
   D.students.forEach(s => { 
     let pCurr = getPersonalMonth(s, CY, CM);
     if(pCurr) {
-      currentExpected += s.fee;
+      if (!isDropped(s, pCurr.y, pCurr.m)) currentExpected += s.fee;
       let pay = s.payments[pk(pCurr.y, pCurr.m)];
       if(pay) pThisMonth += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0));
     }
@@ -465,15 +469,18 @@ function renderList() {
     let badge = "";
     let pCurr = getPersonalMonth(s, CY, CM);
     
-    if (isNA(s, VY, 0)) {
+    if (VY < s.joinY) {
       badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
     } 
     else if (pCurr && VY === pCurr.y) {
-      let mDue = monthDue(s, pCurr.y, pCurr.m);
-      if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
-      else if (mDue > 0 && mDue < s.fee) badge = `<div class="badge partial">Bal ₹${mDue}</div>`;
-      else if (isOv(s, pCurr.y, pCurr.m)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
-      else badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Due ₹${s.fee}</div>`;
+      if (isDropped(s, pCurr.y, pCurr.m)) badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Cycle Removed</div>`;
+      else {
+        let mDue = monthDue(s, pCurr.y, pCurr.m);
+        if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
+        else if (mDue > 0 && mDue < s.fee) badge = `<div class="badge partial">Bal ₹${mDue}</div>`;
+        else if (isOv(s, pCurr.y, pCurr.m)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
+        else badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Due ₹${s.fee}</div>`;
+      }
     } 
     else {
       let yc = 0; 
@@ -495,7 +502,11 @@ function openDetails(id) { VY = CY; renderDetailsContent(stu(id)); openMod('mStu
 function renderDetailsContent(s) {
   let monthGrid = "";
   for(let i=0; i<12; i++) {
-    const na = isNA(s, VY, i); const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); 
+    const isDrp = isDropped(s, VY, i);
+    const preJoin = VY < s.joinY;
+    const na = preJoin || isDrp;
+    
+    const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); 
     const pCurr = getPersonalMonth(s, CY, CM);
     const iC = pCurr && pCurr.y === VY && pCurr.m === i;
     const ov = isOv(s, VY, i) && !pd && !na;
@@ -508,10 +519,10 @@ function renderDetailsContent(s) {
     else if(ov) { cls += " ov"; }
     
     let mTitle = `Month ${i+1}`;
-    let mSub = na ? "—" : getCycleLabel(s, VY, i);
+    let mSub = preJoin ? "—" : (isDrp ? "Removed" : getCycleLabel(s, VY, i));
     
     monthGrid += `
-      <div class="${cls}" ${na ? '' : `onclick="openPayment('${s.id}', ${VY}, ${i})"`}>
+      <div class="${cls}" ${preJoin ? '' : `onclick="openPayment('${s.id}', ${VY}, ${i})"`}>
         <div class="m-box-l" style="font-size:13px; color:var(--text-main); font-weight:800;">${mTitle}</div>
         <div style="font-size:9px; color:var(--text-mut); font-weight:600; text-align:center;">${mSub}</div>
         <div class="m-box-i">${icon}</div>
@@ -534,9 +545,43 @@ function renderDetailsContent(s) {
   `;
 }
 
+// --- CYCLE DELETION ACTIONS ---
+function dropMonth(id, y, m) {
+  const s = stu(id);
+  if (!s.dropped) s.dropped = [];
+  const key = pk(y,m);
+  if (!s.dropped.includes(key)) s.dropped.push(key);
+  if (s.payments[key]) delete s.payments[key]; // Safety clear to prevent ghost revenue
+  save(); renderAll(); renderDetailsContent(s);
+  closeMod("mPayment");
+}
+
+function restoreMonth(id, y, m) {
+  const s = stu(id);
+  if (s.dropped) { s.dropped = s.dropped.filter(k => k !== pk(y,m)); }
+  save(); renderAll(); renderDetailsContent(s);
+  closeMod("mPayment");
+}
+
 // --- PAYMENT MODAL (WATERFALL LOGIC) ---
 function openPayment(id, y, m) {
-  const s = stu(id); const isFullyPaid = isPaid(s, y, m);
+  const s = stu(id); 
+  
+  if (isDropped(s, y, m)) {
+    document.getElementById("pId").value = id;
+    document.getElementById("payTitle").textContent = "Cycle Disabled";
+    document.getElementById("payBody").innerHTML = `
+      <div style="background:var(--bg-main); padding:20px; border-radius:16px; margin-bottom:20px; text-align:center;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-mut); margin-bottom:4px;">Month ${m+1}</div>
+        <div style="font-size:16px; font-weight:800; color:var(--text-main);">This billing cycle is currently removed.</div>
+      </div>
+      <button class="btn-solid" onclick="restoreMonth('${id}', ${y}, ${m})">Restore Cycle</button>
+    `;
+    openMod("mPayment");
+    return;
+  }
+
+  const isFullyPaid = isPaid(s, y, m);
   document.getElementById("pId").value = id;
   document.getElementById("payTitle").textContent = isFullyPaid ? "Payment Details" : "Record Payment";
 
@@ -553,12 +598,12 @@ function openPayment(id, y, m) {
       <button class="btn-outline" style="color:var(--danger); border-color:var(--danger-bg);" onclick="unmarkPaid('${id}',${y},${m})">Remove Record</button>
     `;
   } else {
-    activePayMonths = [m]; renderPayModal(id, y);
+    activePayMonths = [m]; renderPayModal(id, y, m);
   }
   openMod("mPayment");
 }
 
-function renderPayModal(id, y) {
+function renderPayModal(id, y, openedMonthIndex) {
   const s = stu(id); 
   const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i) && !isNA(s, y, i));
   let maxM = Math.max(...activePayMonths); let totalDue = 0;
@@ -581,16 +626,17 @@ function renderPayModal(id, y) {
     </div>
     ${s.phone ? `<button class="btn-solid" onclick="savePayAndShare('${id}',${y})" style="background:#25D366; margin-bottom:10px;">Save & Share Receipt</button>` : ''}
     <button class="btn-outline" onclick="savePayOnly('${id}',${y})">Save Only</button>
+    <button class="btn-outline" style="color:var(--danger); border-color:var(--danger-bg); margin-top:10px;" onclick="dropMonth('${id}',${y},${openedMonthIndex})">Remove Month ${openedMonthIndex+1}</button>
   `;
 }
 
 function togglePayMonth(id, y, m) {
   if (activePayMonths.includes(m)) { if(activePayMonths.length > 1) activePayMonths = activePayMonths.filter(x => x !== m); }
   else { activePayMonths.push(m); activePayMonths.sort((a,b)=>a-b); }
-  renderPayModal(id, y);
+  renderPayModal(id, y, activePayMonths[activePayMonths.length-1]); // passing last added as fallback
 }
 
-function setMode(m, id, y) { selMode = m; renderPayModal(id, y); }
+function setMode(m, id, y) { selMode = m; renderPayModal(id, y, activePayMonths[0]); }
 
 function savePayLogic(id, y) {
   const s = stu(id); const d = document.getElementById("pDate").value; 
@@ -681,7 +727,11 @@ async function executeReminder() {
 async function shareRecord(id) {
   closeMod("mStudentDetails"); const s = stu(id);
   const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
-  const W = 800; const H = 1450; cvs.width = W; cvs.height = H;
+  
+  // Godmode Dynamic Height calculation based on actual active rows
+  let activeMonths = 0;
+  for(let i=0; i<12; i++) { if(!isDropped(s, VY, i)) activeMonths++; }
+  const W = 800; const H = 380 + (activeMonths * 65) + 160; cvs.width = W; cvs.height = H;
 
   ctx.fillStyle = "#F8FAFC"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#FFFFFF"; drawRoundRect(ctx, 40, 40, W-80, H-80, 24); ctx.fill();
@@ -703,17 +753,22 @@ async function shareRecord(id) {
   let yPos = 370; let tPaid = 0; let tPending = 0; let txtRecord = "";
   
   for(let i=0; i<12; i++) {
-    let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i); let na = isNA(s, VY, i);
+    let isDrp = isDropped(s, VY, i);
+    let preJoin = VY < s.joinY;
+    
+    let pd = isPaid(s, VY, i); let pt = isPartial(s, VY, i); 
     let p = s.payments[pk(VY,i)]; let amt = p?.amt !== undefined ? p.amt : (p?.paid ? s.fee : 0);
     tPaid += amt; tPending += monthDue(s, VY, i);
+
+    if(isDrp) continue; // The Godmode fix: Completely omit dropped cycles
     
     ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
     ctx.fillText(`Month ${i+1}`, 60, yPos);
     ctx.fillStyle = "#64748B"; ctx.font = "600 13px 'DM Sans', sans-serif"; 
     ctx.fillText(getCoverageString(s, VY, [i]), 60, yPos + 22);
     
-    if(na) {
-      ctx.fillStyle = "#64748B"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("—", 300, yPos);
+    if(preJoin) {
+      ctx.fillStyle = "#64748B"; ctx.font = "800 18px 'DM Sans', sans-serif"; ctx.fillText("Not Enrolled", 300, yPos);
       txtRecord += `\n- *Month ${i+1}:* Not Enrolled`;
       ctx.textAlign = "right"; ctx.fillText("—", W-60, yPos);
     } else if(pd) {
@@ -888,7 +943,22 @@ function openSettings() { document.getElementById("sName").value = D.cfg.name; d
 function saveSettings() { D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; D.cfg.loc = document.getElementById("sLoc").value.trim(); save(); closeMod("mSettings"); renderAll(); }
 function doExport() {
   const hdr=["Name","Class","Fee/Month","Due Date",...MN,"Total Collected"];
-  const rows=D.students.map(s=>{ let yrCount = 0; MN.forEach((_,i)=>{if(isPaid(s,VY,i))yrCount++;}); return [s.name,s.cls,s.fee,getEffDueStr(s),...MN.map((_,i)=>isPaid(s,VY,i)?(s.payments[pk(VY,i)]?.mode||"Cash"):""),yrCount*s.fee]; });
+  const rows=D.students.map(s=>{ 
+    let yrCount = 0; 
+    for(let i=0; i<12; i++){ if(isPaid(s,VY,i)) yrCount++; } 
+    return [
+      s.name,
+      s.cls,
+      s.fee,
+      getEffDueStr(s),
+      ...MN.map((_,i) => {
+         if (VY < s.joinY) return "N/A";
+         if (isDropped(s, VY, i)) return "Skipped";
+         return isPaid(s,VY,i) ? (s.payments[pk(VY,i)]?.mode||"Cash") : "";
+      }),
+      yrCount*s.fee
+    ]; 
+  });
   const csv=[hdr,...rows].map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`TTC_Fee_${VY}.csv`; a.click();
 }

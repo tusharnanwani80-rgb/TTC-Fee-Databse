@@ -87,7 +87,7 @@ input, select { font-family: inherit; }
 .badge { padding: 4px 10px; border-radius: 50px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 .badge.paid { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
 .badge.partial { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
-.badge.due { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+.badge.due { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); transition: background 0.3s; }
 
 /* MODALS */
 .mbg { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s; }
@@ -362,6 +362,20 @@ function toggleFilterMode() {
   renderList();
 }
 
+// --- TIME ENGINE HELPERS ---
+function timeAgo(ms) {
+  let diff = Date.now() - ms;
+  let days = Math.floor(diff / (1000*60*60*24));
+  let hrs = Math.floor((diff / (1000*60*60)) % 24);
+  let mins = Math.floor((diff / (1000*60)) % 60);
+
+  if (days > 1) return `${days} days ago`;
+  if (days === 1) return `Yesterday`;
+  if (hrs > 0) return `${hrs} hours ago`;
+  if (mins > 0) return `${mins} mins ago`;
+  return `Just now`;
+}
+
 // --- GODMODE: UNIQUE TIMELINE ENGINE (For Inner Boxes) ---
 function getCalDate(finYear, finMonthIndex) {
   let absoluteFinMonths = finYear * 12 + finMonthIndex;
@@ -508,12 +522,20 @@ function renderList() {
     // GODMODE FILTER: If filter is active, instantly skip anyone without a Red Pill
     if (viewFilter === 'due' && overdueArrears === 0) return; 
 
+    // RELATIONSHIP COOLDOWN INDICATOR
+    let remPrefix = "";
+    if (s.remLog && s.remLog.length > 0) {
+       let hrs = (Date.now() - s.remLog[s.remLog.length-1]) / 3600000;
+       if (hrs < 24) remPrefix = "⏳ ";
+       else if (hrs < 48) remPrefix = "🔕 ";
+    }
+
     // THE PILL RENDERER
     if (VY < s.joinY) {
        badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
     } else if (overdueArrears > 0) {
        // RED PILL: They strictly have past due debts (End date has crossed)
-       badge = `<div class="badge due">Due ₹${overdueArrears}</div>`;
+       badge = `<div class="badge due">${remPrefix}Due ₹${overdueArrears}</div>`;
     } else if (hasActiveCycle) {
        // THEY HAVE NO ARREARS. Evaluate their current active cycle.
        if (activePaid) {
@@ -781,6 +803,20 @@ function renderRemModal() {
   
   const gridHtml = allUnpaid.map(i => `<div class="pm-m-btn ${activeRemMonths.includes(i)?'on':''}" onclick="toggleRemMonth(${i})"><div style="font-size:13px; font-weight:800;">Month ${i+1}</div><div style="font-size:9px; opacity:0.8;">${getCycleLabel(s, CY, i)}</div></div>`).join("");
 
+  let historyHtml = `<div style="text-align:center; font-size:12px; color:var(--text-mut); margin-top:16px; margin-bottom:8px;">No reminders sent yet.</div>`;
+  if (s.remLog && s.remLog.length > 0) {
+      let lastRem = s.remLog[s.remLog.length - 1];
+      let d = new Date(lastRem);
+      let timeStr = `${d.toLocaleDateString('en-IN', {month:'short', day:'numeric'})} (${timeAgo(lastRem)})`;
+      historyHtml = `
+        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px; margin-top:16px; margin-bottom:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-mut); text-transform:uppercase; margin-bottom:6px;">🕒 Reminder History</div>
+          <div style="font-size:13px; font-weight:600; color:var(--text-main);">Last Nudged: ${timeStr}</div>
+          <div style="font-size:11px; color:var(--text-mut); margin-top:4px;">Total Nudges Sent: ${s.remLog.length}</div>
+        </div>
+      `;
+  }
+
   document.getElementById("remBody").innerHTML = `
     <div class="pay-amt">
       <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Remind For Balance</span>
@@ -791,7 +827,8 @@ function renderRemModal() {
       <div style="font-size:11px; color:var(--text-mut); margin-top:8px;">Includes all previous arrears.</div>
     </div>
     <div class="fld"><label>Target Months</label><div class="pm-month-grid">${gridHtml}</div></div>
-    <button class="btn-solid" onclick="executeReminder()" style="background:#25D366; margin-top:10px;">Send Reminder</button>
+    ${historyHtml}
+    <button id="remSendBtn" class="btn-solid" onclick="executeReminder()" style="background:#25D366; margin-top:10px;">Send Reminder</button>
   `;
 }
 
@@ -810,8 +847,32 @@ async function executeReminder() {
       alert("Please select at least one month to send a reminder.");
       return;
   }
-  const id = document.getElementById("rId").value; const customAmt = parseInt(document.getElementById("rAmt").value) || 0;
-  closeMod("mReminderSettings"); await generateAndShare(id, CY, activeRemMonths, 'reminder', customAmt);
+  const id = document.getElementById("rId").value; 
+  const customAmt = parseInt(document.getElementById("rAmt").value) || 0;
+  const s = stu(id);
+
+  // RELATIONSHIP PROTECTION OVERRIDE
+  if (s.remLog && s.remLog.length > 0) {
+      let diffHrs = (Date.now() - s.remLog[s.remLog.length-1]) / 3600000;
+      if (diffHrs < 24) {
+          const btn = document.getElementById("remSendBtn");
+          if (!btn.classList.contains("warned")) {
+              btn.classList.add("warned");
+              btn.style.background = "var(--warning)";
+              btn.textContent = "Warned Recently. Send Anyway?";
+              return; // Wait for second click to execute
+          }
+      }
+  }
+
+  // Mark reminder sent
+  if (!s.remLog) s.remLog = [];
+  s.remLog.push(Date.now());
+  save(); 
+  renderAll(); // Instantly update the dashboard Pill
+  
+  closeMod("mReminderSettings"); 
+  await generateAndShare(id, CY, activeRemMonths, 'reminder', customAmt);
 }
 
 // --- SHARE LEDGER RECORD (STATEMENT) ---

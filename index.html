@@ -774,13 +774,13 @@ function openReminderModal(id) {
         activeRemMonths.push(i); 
     }
     
-    // Check if there's any unpaid month at all (Overdue OR Pending)
-    if(NOW >= d.start && !isPaid(s, CY, i)) {
+    // THE ULTRATHINK FIX: Allow reminder if there is ANY unpaid month (even pending/future)
+    if(!isPaid(s, CY, i)) {
         hasAnyUnpaid = true;
     }
   }
   
-  if(!hasAnyUnpaid) { alert(`No pending dues right now! 🎉`); return; }
+  if(!hasAnyUnpaid) { alert(`All months are fully paid! 🎉`); return; }
   
   document.getElementById("rId").value = id; renderRemModal(); openMod("mReminderSettings");
 }
@@ -797,8 +797,8 @@ function renderRemModal() {
   let allUnpaid = []; 
   for(let i=0; i<12; i++) { 
     if(isNA(s, CY, i)) continue;
-    let d = getCycleDates(s, CY, i);
-    if(NOW >= d.start && !isPaid(s, CY, i)) allUnpaid.push(i); 
+    // THE ULTRATHINK FIX: Removed date restriction so future months appear
+    if(!isPaid(s, CY, i)) allUnpaid.push(i); 
   }
   
   const gridHtml = allUnpaid.map(i => `<div class="pm-m-btn ${activeRemMonths.includes(i)?'on':''}" onclick="toggleRemMonth(${i})"><div style="font-size:13px; font-weight:800;">Month ${i+1}</div><div style="font-size:9px; opacity:0.8;">${getCycleLabel(s, CY, i)}</div></div>`).join("");
@@ -826,7 +826,11 @@ function renderRemModal() {
       </div>
       <div style="font-size:11px; color:var(--text-mut); margin-top:8px;">Includes all previous arrears.</div>
     </div>
-    <div class="fld"><label>Target Months</label><div class="pm-month-grid">${gridHtml}</div></div>
+    <div class="fld">
+      <label>Target Months</label>
+      ${activeRemMonths.length === 0 ? `<div style="font-size:11px; font-weight:700; color:var(--warning); margin-bottom:8px;">* No overdue arrears. Tap a pending month below to select it.</div>` : ''}
+      <div class="pm-month-grid">${gridHtml}</div>
+    </div>
     ${historyHtml}
     <button id="remSendBtn" class="btn-solid" onclick="executeReminder()" style="background:#25D366; margin-top:10px;">Send Reminder</button>
   `;

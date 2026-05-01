@@ -61,9 +61,13 @@ input, select { font-family: inherit; }
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
 .search-box { position: relative; flex: 1; }
 .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-mut); width: 18px; height: 18px; pointer-events: none; }
-.search-box input { width: 100%; padding: 12px 16px 12px 38px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; background: var(--surface); outline: none; font-weight: 500; color: var(--text-main); transition: border-color 0.2s; }
+.search-box input { width: 100%; height: 44px; padding: 0 16px 0 38px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; background: var(--surface); outline: none; font-weight: 500; color: var(--text-main); transition: border-color 0.2s; }
 .search-box input:focus { border-color: var(--primary); }
-.btn-add { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary); color: white; padding: 0 20px; border-radius: 12px; font-size: 14px; font-weight: 700; transition: background 0.2s; white-space: nowrap; }
+
+.btn-filter { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text-mut); transition: all 0.2s; flex-shrink: 0; }
+.btn-filter.on { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+
+.btn-add { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary); color: white; padding: 0 20px; border-radius: 12px; font-size: 14px; font-weight: 700; transition: background 0.2s; white-space: nowrap; height: 44px; flex-shrink: 0; }
 .btn-add:hover { background: var(--primary-hover); }
 
 .year-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
@@ -179,6 +183,7 @@ canvas { display: none; }
   <symbol id="ico-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></symbol>
   <symbol id="ico-partial" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"></circle></symbol>
   <symbol id="ico-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></symbol>
+  <symbol id="ico-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></symbol>
 </svg>
 
 <div class="cloud-sync" id="syncBadge">
@@ -197,6 +202,9 @@ canvas { display: none; }
   <div class="year-tabs" id="ytabs"></div>
   <div class="toolbar">
     <div class="search-box"><svg><use href="#ico-search"></use></svg><input id="qSearch" placeholder="Search student name..." oninput="renderList()"></div>
+    <button class="btn-filter" id="btnFilter" onclick="toggleFilterMode()">
+      <svg width="20" height="20"><use href="#ico-filter"></use></svg>
+    </button>
     <button class="btn-add" onclick="openAdd()"><svg width="18" height="18"><use href="#ico-plus"></use></svg> Add</button>
   </div>
   <div class="stu-list" id="stuList"></div>
@@ -265,11 +273,9 @@ const MN = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","M
 const FULL_MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const NOW = new Date();
-const realM = NOW.getMonth(); 
 const CD = NOW.getDate();
-
-const CY = realM < 3 ? NOW.getFullYear() - 1 : NOW.getFullYear();
-const CM = (realM + 9) % 12; 
+const CM = (NOW.getMonth() + 9) % 12; // Financial month index (0 = April)
+const CY = NOW.getMonth() < 3 ? NOW.getFullYear() - 1 : NOW.getFullYear();
 
 const LOGO_URL="https://i.ibb.co/dsBdtCwK/Ttc-logo.png";
 const QR_URL="https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png";
@@ -285,6 +291,7 @@ let DB_URL = "https://script.google.com/macros/s/AKfycbx23q-7hv2ZXazHw0RsTdi9wQQ
 let VY=CY, selMode="cash";
 let activePayMonths = [];
 let activeRemMonths = [];
+let viewFilter = 'all'; // GODMODE FILTER STATE
 let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra"}, students:[]};
 
 // --- PRELOAD IMAGES SAFELY ---
@@ -343,22 +350,48 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function stu(id){return D.students.find(s=>s.id===id);}
 function pk(y,m){return y+"-"+m;}
 
-// --- MATH ENGINE FOR DYNAMIC MONTHS ---
+// --- GODMODE: FILTER UI TOGGLE ---
+function toggleFilterMode() {
+  viewFilter = viewFilter === 'all' ? 'due' : 'all';
+  const btn = document.getElementById("btnFilter");
+  if (viewFilter === 'due') {
+    btn.classList.add('on');
+  } else {
+    btn.classList.remove('on');
+  }
+  renderList();
+}
+
+// --- GODMODE: UNIQUE TIMELINE ENGINE (For Inner Boxes) ---
 function getCalDate(finYear, finMonthIndex) {
   let absoluteFinMonths = finYear * 12 + finMonthIndex;
   let calM = (absoluteFinMonths + 3) % 12; // 0=Jan, 3=Apr
   let calY = Math.floor((absoluteFinMonths + 3) / 12);
-  return { M: calM, Y: calY };
+  return { Y: calY, M: calM };
+}
+
+// Calculates exact Start and End dates for a specific student's individual cycle
+function getCycleDates(s, y, m) {
+  let startMonthData = getCalDate(y, s.joinM + m);
+  let d1 = s.due || 10;
+  
+  let endMonthOffset = d1 === 1 ? 0 : 1;
+  let endMonthData = getCalDate(y, s.joinM + m + endMonthOffset);
+  
+  let d2;
+  if (d1 === 1) { d2 = new Date(startMonthData.Y, startMonthData.M + 1, 0).getDate(); } 
+  else { d2 = d1 - 1; }
+  
+  let startDate = new Date(startMonthData.Y, startMonthData.M, d1, 0, 0, 0);
+  let endDate = new Date(endMonthData.Y, endMonthData.M, d2, 23, 59, 59);
+  
+  return { start: startDate, end: endDate };
 }
 
 // FORMATTING HELPERS
-function getEffDue(s) {
-  let d = s.due || 10;
-  return d > 1 ? d - 1 : 30;
-}
-
 function getEffDueStr(s) {
-  let d = getEffDue(s);
+  let d1 = s.due || 10;
+  let d = d1 > 1 ? d1 - 1 : 30; // Approx format for string
   if (d > 3 && d < 21) return d + 'th';
   switch (d % 10) {
     case 1:  return d + "st";
@@ -369,41 +402,19 @@ function getEffDueStr(s) {
 }
 
 function getCycleLabel(s, y, m) {
-  let dStart = getCalDate(y, s.joinM + m);
-  let d1 = s.due || 10;
-  let d2 = d1 > 1 ? d1 - 1 : 30;
-  let endOffset = d1 == 1 ? 0 : 1; 
-  let dEnd = getCalDate(y, s.joinM + m + endOffset);
-  return `${FULL_MN[dStart.M]} ${d1} - ${FULL_MN[dEnd.M]} ${d2}`;
+  let dates = getCycleDates(s, y, m);
+  return `${FULL_MN[dates.start.getMonth()]} ${dates.start.getDate()} - ${FULL_MN[dates.end.getMonth()]} ${dates.end.getDate()}`;
 }
 
 function getCoverageString(s, y, monthsArr) {
-  let dStart = getCalDate(y, s.joinM + monthsArr[0]);
-  let d1 = s.due || 10;
-  let d2 = d1 > 1 ? d1 - 1 : 30;
-  let endOffset = d1 == 1 ? 0 : 1; 
-  let dEnd = getCalDate(y, s.joinM + monthsArr[monthsArr.length-1] + endOffset);
-  return `${d1} ${FULL_MN[dStart.M]} ${dStart.Y} to ${d2} ${FULL_MN[dEnd.M]} ${dEnd.Y}`;
+  let dStart = getCycleDates(s, y, monthsArr[0]).start;
+  let dEnd = getCycleDates(s, y, monthsArr[monthsArr.length-1]).end;
+  return `${dStart.getDate()} ${FULL_MN[dStart.getMonth()]} ${dStart.getFullYear()} to ${dEnd.getDate()} ${FULL_MN[dEnd.getMonth()]} ${dEnd.getFullYear()}`;
 }
 
-function getPersonalMonth(s, globY, globM) {
-  let globAbs = globY * 12 + globM;
-  let joinAbs = s.joinY * 12 + s.joinM;
-  if (globAbs < joinAbs) return null;
-  let diff = globAbs - joinAbs;
-  return { y: s.joinY + Math.floor(diff / 12), m: diff % 12 };
-}
-
-// CYCLE DELETION ENGINE
-function isDropped(s, y, m) {
-  return s.dropped && s.dropped.includes(pk(y, m));
-}
-
-function isNA(s, y, m) {
-  if (y < s.joinY) return true;
-  if (isDropped(s, y, m)) return true;
-  return false;
-}
+// CYCLE STATUS ENGINE
+function isDropped(s, y, m) { return s.dropped && s.dropped.includes(pk(y, m)); }
+function isNA(s, y, m) { return (y < s.joinY) || isDropped(s, y, m); }
 
 function monthDue(s, y, m) {
   if (isNA(s, y, m)) return 0;
@@ -415,18 +426,6 @@ function monthDue(s, y, m) {
 
 function isPaid(s, y, m) { return !isNA(s, y, m) && monthDue(s, y, m) === 0; }
 function isPartial(s, y, m) { let d = monthDue(s, y, m); return d > 0 && d < s.fee; }
-
-function isOv(s, y, m) {
-  let boxAbs = y * 12 + s.joinM + m;
-  let d1 = s.due || 10;
-  let endOffset = d1 == 1 ? 0 : 1; 
-  let dueMonthAbs = boxAbs + endOffset; 
-  let currAbs = CY * 12 + CM;
-  
-  if (currAbs > dueMonthAbs) return true;
-  if (currAbs === dueMonthAbs && CD > getEffDue(s)) return true;
-  return false;
-}
 function getInitials(n){return n.split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();}
 
 // --- RENDER LOGIC ---
@@ -443,11 +442,15 @@ function renderStats() {
   
   let currentExpected = 0; let pThisMonth = 0;
   D.students.forEach(s => { 
-    let pCurr = getPersonalMonth(s, CY, CM);
-    if(pCurr) {
-      if (!isDropped(s, pCurr.y, pCurr.m)) currentExpected += s.fee;
-      let pay = s.payments[pk(pCurr.y, pCurr.m)];
-      if(pay) pThisMonth += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0));
+    for(let i=0; i<12; i++) {
+      if (isNA(s, CY, i)) continue;
+      let d = getCycleDates(s, CY, i);
+      if (NOW >= d.start && NOW <= d.end) {
+        currentExpected += s.fee;
+        let pay = s.payments[pk(CY, i)];
+        if(pay) pThisMonth += (pay.amt !== undefined ? pay.amt : (pay.paid ? s.fee : 0));
+        break; // Only calculate expected revenue for their currently active cycle
+      }
     }
   });
 
@@ -462,39 +465,86 @@ function renderYTabs(){ document.getElementById("ytabs").innerHTML = [CY-1, CY, 
 
 function renderList() {
   const q = (document.getElementById("qSearch").value||"").toLowerCase();
-  const list = D.students.filter(s => !q || s.name.toLowerCase().includes(q));
-  if(!list.length) { document.getElementById("stuList").innerHTML = `<div style="text-align:center; padding: 40px; color:var(--text-mut); font-weight:600;">No students found.</div>`; return; }
+  let html = "";
+  let count = 0;
 
-  document.getElementById("stuList").innerHTML = list.map(s => {
+  D.students.forEach(s => {
+    if (q && !s.name.toLowerCase().includes(q)) return;
+
     let badge = "";
-    let pCurr = getPersonalMonth(s, CY, CM);
-    
-    if (VY < s.joinY) {
-      badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
-    } 
-    else if (pCurr && VY === pCurr.y) {
-      if (isDropped(s, pCurr.y, pCurr.m)) badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Cycle Removed</div>`;
-      else {
-        let mDue = monthDue(s, pCurr.y, pCurr.m);
-        if (mDue === 0) badge = `<div class="badge paid">Paid</div>`;
-        else if (mDue > 0 && mDue < s.fee) badge = `<div class="badge partial">Bal ₹${mDue}</div>`;
-        else if (isOv(s, pCurr.y, pCurr.m)) badge = `<div class="badge due">Due ₹${s.fee}</div>`;
-        else badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Due ₹${s.fee}</div>`;
+    let overdueArrears = 0;
+    let activeUnpaid = 0;
+    let activePaid = false;
+    let activePartial = false;
+    let hasActiveCycle = false;
+
+    let totalValid = 0;
+    let totalPaid = 0;
+
+    for(let i=0; i<12; i++) {
+      if (isNA(s, VY, i)) continue;
+      totalValid++;
+
+      let d = getCycleDates(s, VY, i);
+      let mDue = monthDue(s, VY, i);
+
+      if (mDue === 0) totalPaid++;
+
+      let isPast = NOW > d.end;
+      let isActive = NOW >= d.start && NOW <= d.end;
+
+      if (isPast && mDue > 0) {
+         // Cycle has officially ended and fee is not cleared. They are in arrears.
+         overdueArrears += mDue;
+      } else if (isActive) {
+         // This is their current cycle.
+         hasActiveCycle = true;
+         activeUnpaid = mDue;
+         if (mDue === 0) activePaid = true;
+         else if (mDue < s.fee) activePartial = true;
       }
-    } 
-    else {
-      let yc = 0; 
-      for(let i=0; i<12; i++) if(isPaid(s, VY, i)) yc++;
-      badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${yc}/12 Paid</div>`;
+    }
+
+    // GODMODE FILTER: If filter is active, instantly skip anyone without a Red Pill
+    if (viewFilter === 'due' && overdueArrears === 0) return; 
+
+    // THE PILL RENDERER
+    if (VY < s.joinY) {
+       badge = `<div class="badge" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Not Enrolled</div>`;
+    } else if (overdueArrears > 0) {
+       // RED PILL: They strictly have past due debts (End date has crossed)
+       badge = `<div class="badge due">Due ₹${overdueArrears}</div>`;
+    } else if (hasActiveCycle) {
+       // THEY HAVE NO ARREARS. Evaluate their current active cycle.
+       if (activePaid) {
+           badge = `<div class="badge paid">Paid</div>`;
+       } else if (activePartial) {
+           badge = `<div class="badge partial">Bal ₹${activeUnpaid}</div>`;
+       } else {
+           // GREY PILL: They are inside their coverage period and still have time to pay.
+           badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">Pending ₹${activeUnpaid}</div>`;
+       }
+    } else {
+       // No active cycle and no arrears (e.g. they finished the year)
+       badge = `<div class="badge due" style="background:var(--bg-main); color:var(--text-mut); border:1px solid var(--border);">${totalPaid}/${totalValid} Paid</div>`;
     }
     
-    return `
+    html += `
       <div class="stu-card" onclick="openDetails('${s.id}')">
         <div class="stu-av">${getInitials(s.name)}</div>
         <div class="stu-info"><div class="stu-name">${s.name}</div><div class="stu-meta">Class ${s.cls} ${s.phone?"· Linked":""}</div></div>
         <div class="stu-status">${badge}</div>
       </div>`;
-  }).join("");
+    
+    count++;
+  });
+
+  if(count === 0) {
+     let emptyText = viewFilter === 'due' ? "No pending dues right now! 🎉" : "No students found.";
+     document.getElementById("stuList").innerHTML = `<div style="text-align:center; padding: 40px; color:var(--text-mut); font-weight:600;">${emptyText}</div>`;
+  } else {
+     document.getElementById("stuList").innerHTML = html;
+  }
 }
 
 // --- DETAILS MODAL ---
@@ -506,17 +556,21 @@ function renderDetailsContent(s) {
     const preJoin = VY < s.joinY;
     const na = preJoin || isDrp;
     
-    const pd = isPaid(s, VY, i); const pt = isPartial(s, VY, i); 
-    const pCurr = getPersonalMonth(s, CY, CM);
-    const iC = pCurr && pCurr.y === VY && pCurr.m === i;
-    const ov = isOv(s, VY, i) && !pd && !na;
+    const pd = isPaid(s, VY, i); 
+    const pt = isPartial(s, VY, i); 
+    
+    // The True Timeline Engine governs exactly when the blue box shifts
+    let d = getCycleDates(s, VY, i);
+    const isActive = NOW >= d.start && NOW <= d.end;
+    const isPast = NOW > d.end;
     
     let cls = "m-box"; let icon = `<svg><use href="#ico-check"></use></svg>`;
-    if(na) { cls += " na"; icon = `<span class="m-box-i na-i">-</span>`; }
-    else if(pd) { cls += " paid"; } 
-    else if(pt) { cls += " partial"; icon = `<svg><use href="#ico-partial"></use></svg>`; } 
-    else if(iC) { cls += " curr"; } 
-    else if(ov) { cls += " ov"; }
+    
+    if (na) { cls += " na"; icon = `<span class="m-box-i na-i">-</span>`; }
+    else if (pd) { cls += " paid"; } 
+    else if (pt) { cls += " partial"; icon = `<svg><use href="#ico-partial"></use></svg>`; } 
+    else if (isActive) { cls += " curr"; } // Current Active Month is BLUE!
+    else if (isPast) { cls += " ov"; } // Past Unpaid Month is RED!
     
     let mTitle = `Month ${i+1}`;
     let mSub = preJoin ? "—" : (isDrp ? "Removed" : getCycleLabel(s, VY, i));
@@ -551,7 +605,7 @@ function dropMonth(id, y, m) {
   if (!s.dropped) s.dropped = [];
   const key = pk(y,m);
   if (!s.dropped.includes(key)) s.dropped.push(key);
-  if (s.payments[key]) delete s.payments[key]; // Safety clear to prevent ghost revenue
+  if (s.payments[key]) delete s.payments[key]; 
   save(); renderAll(); renderDetailsContent(s);
   closeMod("mPayment");
 }
@@ -606,6 +660,8 @@ function openPayment(id, y, m) {
 function renderPayModal(id, y, openedMonthIndex) {
   const s = stu(id); 
   const unpaidMonths = MN.map((name, i) => i).filter(i => !isPaid(s, y, i) && !isNA(s, y, i));
+  
+  // Waterfall Engine adds up older debts preventing Swiss Cheese accounting
   let maxM = Math.max(...activePayMonths); let totalDue = 0;
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, y, i);
   
@@ -633,7 +689,7 @@ function renderPayModal(id, y, openedMonthIndex) {
 function togglePayMonth(id, y, m) {
   if (activePayMonths.includes(m)) { if(activePayMonths.length > 1) activePayMonths = activePayMonths.filter(x => x !== m); }
   else { activePayMonths.push(m); activePayMonths.sort((a,b)=>a-b); }
-  renderPayModal(id, y, activePayMonths[activePayMonths.length-1]); // passing last added as fallback
+  renderPayModal(id, y, activePayMonths[activePayMonths.length-1]); 
 }
 
 function setMode(m, id, y) { selMode = m; renderPayModal(id, y, activePayMonths[0]); }
@@ -685,8 +741,13 @@ function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); render
 // --- SMART REMINDER MODAL ---
 function openReminderModal(id) {
   closeMod("mStudentDetails"); const s = stu(id); activeRemMonths = [];
-  for(let i=0; i<=CM; i++) { if(!isPaid(s, CY, i) && !isNA(s, CY, i)) activeRemMonths.push(i); }
-  if(activeRemMonths.length === 0) { alert(`No pending dues!`); return; }
+  for(let i=0; i<12; i++) { 
+    if(isNA(s, CY, i)) continue;
+    let d = getCycleDates(s, CY, i);
+    // Add cycle to reminder ONLY if it has physically started and is unpaid
+    if(NOW >= d.start && !isPaid(s, CY, i)) activeRemMonths.push(i); 
+  }
+  if(activeRemMonths.length === 0) { alert(`No pending dues right now!`); return; }
   document.getElementById("rId").value = id; renderRemModal(); openMod("mReminderSettings");
 }
 
@@ -694,7 +755,13 @@ function renderRemModal() {
   const id = document.getElementById("rId").value; const s = stu(id);
   let maxM = Math.max(...activeRemMonths); let totalDue = 0;
   for(let i=0; i<=maxM; i++) totalDue += monthDue(s, CY, i);
-  let allUnpaid = []; for(let i=0; i<=11; i++) { if(!isPaid(s, CY, i) && !isNA(s, CY, i)) allUnpaid.push(i); }
+  
+  let allUnpaid = []; 
+  for(let i=0; i<12; i++) { 
+    if(isNA(s, CY, i)) continue;
+    let d = getCycleDates(s, CY, i);
+    if(NOW >= d.start && !isPaid(s, CY, i)) allUnpaid.push(i); 
+  }
   
   const gridHtml = allUnpaid.map(i => `<div class="pm-m-btn ${activeRemMonths.includes(i)?'on':''}" onclick="toggleRemMonth(${i})"><div style="font-size:13px; font-weight:800;">Month ${i+1}</div><div style="font-size:9px; opacity:0.8;">${getCycleLabel(s, CY, i)}</div></div>`).join("");
 
@@ -728,7 +795,6 @@ async function shareRecord(id) {
   closeMod("mStudentDetails"); const s = stu(id);
   const cvs = document.getElementById("imgCanvas"); const ctx = cvs.getContext("2d");
   
-  // Godmode Dynamic Height calculation based on actual active rows
   let activeMonths = 0;
   for(let i=0; i<12; i++) { if(!isDropped(s, VY, i)) activeMonths++; }
   const W = 800; const H = 380 + (activeMonths * 65) + 160; cvs.width = W; cvs.height = H;
@@ -760,7 +826,7 @@ async function shareRecord(id) {
     let p = s.payments[pk(VY,i)]; let amt = p?.amt !== undefined ? p.amt : (p?.paid ? s.fee : 0);
     tPaid += amt; tPending += monthDue(s, VY, i);
 
-    if(isDrp) continue; // The Godmode fix: Completely omit dropped cycles
+    if(isDrp) continue; 
     
     ctx.textAlign = "left"; ctx.fillStyle = "#0F172A"; ctx.font = "800 18px 'DM Sans', sans-serif";
     ctx.fillText(`Month ${i+1}`, 60, yPos);

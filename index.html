@@ -171,7 +171,7 @@ canvas { display: none; }
 <svg style="display:none;">
   <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
   <symbol id="ico-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></symbol>
-  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
+  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></symbol>
   <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></symbol>
   <symbol id="ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></symbol>
   <symbol id="ico-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></symbol>
@@ -741,20 +741,36 @@ function unmarkPaid(id, y, m) { delete stu(id).payments[pk(y,m)]; save(); render
 // --- SMART REMINDER MODAL ---
 function openReminderModal(id) {
   closeMod("mStudentDetails"); const s = stu(id); activeRemMonths = [];
+  let hasAnyUnpaid = false;
+  
   for(let i=0; i<12; i++) { 
     if(isNA(s, CY, i)) continue;
     let d = getCycleDates(s, CY, i);
-    // Add cycle to reminder ONLY if it has physically started and is unpaid
-    if(NOW >= d.start && !isPaid(s, CY, i)) activeRemMonths.push(i); 
+    
+    // GODMODE AUTOFILL: ONLY select months that are officially OVERDUE (Red Pill)
+    if(NOW > d.end && !isPaid(s, CY, i)) {
+        activeRemMonths.push(i); 
+    }
+    
+    // Check if there's any unpaid month at all (Overdue OR Pending)
+    if(NOW >= d.start && !isPaid(s, CY, i)) {
+        hasAnyUnpaid = true;
+    }
   }
-  if(activeRemMonths.length === 0) { alert(`No pending dues right now!`); return; }
+  
+  if(!hasAnyUnpaid) { alert(`No pending dues right now! 🎉`); return; }
+  
   document.getElementById("rId").value = id; renderRemModal(); openMod("mReminderSettings");
 }
 
 function renderRemModal() {
   const id = document.getElementById("rId").value; const s = stu(id);
-  let maxM = Math.max(...activeRemMonths); let totalDue = 0;
-  for(let i=0; i<=maxM; i++) totalDue += monthDue(s, CY, i);
+  
+  let totalDue = 0;
+  if (activeRemMonths.length > 0) {
+      let maxM = Math.max(...activeRemMonths); 
+      for(let i=0; i<=maxM; i++) totalDue += monthDue(s, CY, i);
+  }
   
   let allUnpaid = []; 
   for(let i=0; i<12; i++) { 
@@ -780,12 +796,20 @@ function renderRemModal() {
 }
 
 function toggleRemMonth(m) {
-  if (activeRemMonths.includes(m)) { if(activeRemMonths.length > 1) activeRemMonths = activeRemMonths.filter(x => x !== m); }
-  else { activeRemMonths.push(m); activeRemMonths.sort((a,b)=>a-b); }
+  if (activeRemMonths.includes(m)) { 
+      // Allow unchecking down to 0
+      activeRemMonths = activeRemMonths.filter(x => x !== m); 
+  } else { 
+      activeRemMonths.push(m); activeRemMonths.sort((a,b)=>a-b); 
+  }
   renderRemModal();
 }
 
 async function executeReminder() {
+  if (activeRemMonths.length === 0) {
+      alert("Please select at least one month to send a reminder.");
+      return;
+  }
   const id = document.getElementById("rId").value; const customAmt = parseInt(document.getElementById("rAmt").value) || 0;
   closeMod("mReminderSettings"); await generateAndShare(id, CY, activeRemMonths, 'reminder', customAmt);
 }

@@ -162,12 +162,17 @@ input, select { font-family: inherit; }
 .pm-mode svg { width: 20px; height: 20px; }
 .pm-mode.on { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
 
+/* MONTHLY RECEIPTS MODAL */
+.mr-list { display: flex; flex-direction: column; gap: 8px; }
+.mr-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; }
+.mr-item .mr-m { font-weight: 700; color: var(--text-main); font-size: 14px; }
+.mr-item .mr-a { font-weight: 800; color: var(--success); font-size: 15px; }
+
 canvas { display: none; }
 </style>
 </head>
 <body>
 
-<!-- SVGs -->
 <svg style="display:none;">
   <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
   <symbol id="ico-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></symbol>
@@ -210,7 +215,27 @@ canvas { display: none; }
   <div class="stu-list" id="stuList"></div>
 </main>
 
-<!-- Modals -->
+<div class="mbg" id="mMonthlyReceipts">
+  <div class="mbox" style="max-width: 400px;">
+    <div class="m-hdr"><div class="m-title">Monthly Receipts <span id="mrYear" style="font-size:14px; color:var(--text-mut); margin-left:8px; font-weight:600;"></span></div><button class="btn-close" onclick="closeMod('mMonthlyReceipts')"><svg><use href="#ico-close"></use></svg></button></div>
+    <div id="mrBody"></div>
+  </div>
+</div>
+
+<div class="mbg" id="mPartnerPayout">
+  <div class="mbox" style="max-width: 400px;">
+    <div class="m-hdr"><div class="m-title">Record Dasvandh</div><button class="btn-close" onclick="closeMod('mPartnerPayout')"><svg><use href="#ico-close"></use></svg></button></div>
+    <div class="pay-amt" style="margin-bottom:16px;">
+       <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Amount Paid</span>
+       <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">
+          <span style="font-size:36px; font-weight:800; color:var(--primary);">₹</span>
+          <input type="number" id="ppAmt" class="amt-input" value="0">
+       </div>
+    </div>
+    <button class="btn-solid" onclick="savePartnerPayout()">Record Dasvandh</button>
+  </div>
+</div>
+
 <div class="mbg" id="mStudentDetails">
   <div class="mbox">
     <div class="m-hdr"><div class="m-title">Student Details</div><button class="btn-close" onclick="closeMod('mStudentDetails')"><svg><use href="#ico-close"></use></svg></button></div>
@@ -261,7 +286,11 @@ canvas { display: none; }
     <div class="fld"><label>Institute Name</label><input id="sName"></div>
     <div class="fld"><label>Location / Tagline</label><input id="sLoc"></div>
     <div class="fld"><label>Payment QR URL</label><input id="sQr" placeholder="Image URL (png/jpg)"></div>
-    <button class="btn-solid" onclick="saveSettings()">Save Changes</button>
+    <div class="fld" style="display:flex; align-items:center; gap:10px; margin-top:20px; background:var(--bg-main); padding:12px; border-radius:12px;">
+      <input type="checkbox" id="sShowNet" style="width:18px; height:18px; margin:0; flex-shrink:0; cursor:pointer;">
+      <label for="sShowNet" style="margin:0; text-transform:none; letter-spacing:0; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer;">Show Net Revenue (Post-10% Dasvandh)</label>
+    </div>
+    <button class="btn-solid" style="margin-top:16px;" onclick="saveSettings()">Save Changes</button>
     <button class="btn-outline" onclick="doExport()">Export Data (CSV)</button>
   </div>
 </div>
@@ -292,7 +321,7 @@ let VY=CY, selMode="cash";
 let activePayMonths = [];
 let activeRemMonths = [];
 let viewFilter = 'all'; // GODMODE FILTER STATE
-let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra", qr:"https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png"}, students:[]};
+let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra", qr:"https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png", showNet:false}, students:[], partnerPayouts:[]};
 
 // --- PRELOAD IMAGES SAFELY ---
 let IMG_LOGO = null, IMG_QR = null;
@@ -331,13 +360,21 @@ function hideSync() { setTimeout(() => syncBadge.classList.remove('show'), 2000)
 // --- DATA LOGIC ---
 async function load() {
   try { const s = localStorage.getItem("ttc_db_cloud_fy"); if(s) D = JSON.parse(s); } catch(e){}
+  if(!D.partnerPayouts) D.partnerPayouts = [];
   reloadQR();
   renderAll();
   if(DB_URL) {
     showSync("Loading from cloud...");
     try {
       const res = await fetch(DB_URL); const json = await res.json();
-      if(json && json.students) { D = json; localStorage.setItem("ttc_db_cloud_fy", JSON.stringify(D)); reloadQR(); renderAll(); showSync("Synced", "var(--success)"); }
+      if(json && json.students) { 
+          D = json; 
+          if(!D.partnerPayouts) D.partnerPayouts = [];
+          localStorage.setItem("ttc_db_cloud_fy", JSON.stringify(D)); 
+          reloadQR(); 
+          renderAll(); 
+          showSync("Synced", "var(--success)"); 
+      }
     } catch(e) { showSync("Offline mode", "var(--warning)"); }
     hideSync();
   }
@@ -466,6 +503,12 @@ function renderStats() {
   let currentExpected = 0; 
   let pThisMonth = 0;
   let totalOutstanding = 0;
+  let pThisMonthCash = 0;
+
+  // Safely get local YYYY-MM
+  let localY = NOW.getFullYear();
+  let localM = String(NOW.getMonth() + 1).padStart(2, '0');
+  let currentCalMonthStr = `${localY}-${localM}`;
 
   D.students.forEach(s => { 
     // 1. Calculate Expected for current active cycle
@@ -492,14 +535,150 @@ function renderStats() {
         }
       }
     }
+
+    // 3. Calculate exact cash flow for the current calendar month
+    if (s.payments) {
+      Object.entries(s.payments).forEach(([k, p]) => {
+        let amt = p.amt !== undefined ? p.amt : (p.paid ? s.fee : 0);
+        if (p.date && p.date.startsWith(currentCalMonthStr)) {
+          pThisMonthCash += amt;
+        } else if (!p.date) {
+          let parts = k.split('-');
+          if (parseInt(parts[0]) === CY && parseInt(parts[1]) === CM) {
+            pThisMonthCash += amt;
+          }
+        }
+      });
+    }
   });
 
+  // OPTION 4: NET REVENUE TOGGLE MATH
+  let mult = D.cfg.showNet ? 0.9 : 1;
+  let netTxt = D.cfg.showNet ? " (Net)" : "";
+
   document.getElementById("statsRow").innerHTML = `
-    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${totalOutstanding.toLocaleString("en-IN")}</div><div class="stat-l">Total Arrears</div></div>
-    <div class="stat-card"><div class="stat-v" style="color:var(--success)">₹${pTotalYear.toLocaleString("en-IN")}</div><div class="stat-l">${CY}-${(CY+1).toString().slice(-2)} Collected</div></div>
-    <div class="stat-card"><div class="stat-v" style="color:var(--warning)">₹${(currentExpected - pThisMonth).toLocaleString("en-IN")}</div><div class="stat-l">Monthly Pending</div></div>
-    <div class="stat-card"><div class="stat-v">₹${currentExpected.toLocaleString("en-IN")}</div><div class="stat-l">Expected / Mo</div></div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--danger)">₹${Math.floor(totalOutstanding * mult).toLocaleString("en-IN")}</div><div class="stat-l">Total Arrears${netTxt}</div></div>
+    <div class="stat-card" style="cursor:pointer; transition: transform 0.2s;" onclick="openReceiptsModal()" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" title="View monthly breakdown">
+      <div class="stat-v" style="color:var(--success)">₹${Math.floor(pThisMonthCash * mult).toLocaleString("en-IN")}</div><div class="stat-l">Rec'd This Mo${netTxt}</div>
+    </div>
+    <div class="stat-card"><div class="stat-v" style="color:var(--warning)">₹${Math.floor((currentExpected - pThisMonth) * mult).toLocaleString("en-IN")}</div><div class="stat-l">Mo. Pending${netTxt}</div></div>
+    <div class="stat-card"><div class="stat-v">₹${Math.floor(currentExpected * mult).toLocaleString("en-IN")}</div><div class="stat-l">Expected / Mo${netTxt}</div></div>
   `;
+}
+
+// OPTION 1 & 3: PARTNER SHADOW LEDGER
+function openReceiptsModal() {
+  let monthlyCollections = Array(12).fill(0);
+  let totalYr = 0;
+  
+  let allTimeGross = 0;
+  let todayGross = 0;
+  let calMonthGross = 0;
+
+  let todayStr = NOW.toISOString().slice(0,10);
+  let localY = NOW.getFullYear();
+  let localM = String(NOW.getMonth() + 1).padStart(2, '0');
+  let currentCalMonthStr = `${localY}-${localM}`;
+
+  D.students.forEach(s => {
+    if(!s.payments) return;
+    Object.entries(s.payments).forEach(([k, p]) => {
+      let amt = p.amt !== undefined ? p.amt : (p.paid ? s.fee : 0);
+      
+      let fy, fm;
+      if(p.date) {
+         let d = new Date(p.date);
+         let m = d.getMonth();
+         let y = d.getFullYear();
+         fy = m < 3 ? y - 1 : y;
+         fm = (m + 9) % 12;
+      } else {
+         let parts = k.split('-');
+         fy = parseInt(parts[0]);
+         fm = parseInt(parts[1]);
+      }
+
+      if(fy === VY) {
+         monthlyCollections[fm] += amt;
+         totalYr += amt;
+      }
+
+      // Partner Math (Global)
+      allTimeGross += amt;
+      if (p.date === todayStr) todayGross += amt;
+      if (p.date && p.date.startsWith(currentCalMonthStr)) calMonthGross += amt;
+      else if (!p.date && fy === CY && fm === CM) calMonthGross += amt;
+    });
+  });
+
+  let listHtml = `<div class="mr-list">`;
+  for(let i=0; i<12; i++) {
+     listHtml += `<div class="mr-item"><div class="mr-m">${FULL_MN[(i+3)%12]}</div><div class="mr-a">₹${monthlyCollections[i].toLocaleString("en-IN")}</div></div>`;
+  }
+  listHtml += `</div>
+  <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:16px; font-weight:800; color:var(--text-main);">
+    <div>Total FY Receipts</div><div style="color:var(--success);">₹${totalYr.toLocaleString("en-IN")}</div>
+  </div>`;
+
+  // Partner Split Logic (10%)
+  let totalPaidOut = (D.partnerPayouts || []).reduce((sum, p) => sum + p.amt, 0);
+  let totalOwed = (allTimeGross * 0.10) - totalPaidOut;
+  let todayCut = todayGross * 0.10;
+  let monthCut = calMonthGross * 0.10;
+
+  let partnerHtml = `
+    <div style="margin-top:24px; padding:16px; background:var(--primary-light); border:1px solid rgba(37,99,235,0.2); border-radius:16px;">
+       <div style="font-size:12px; font-weight:800; color:var(--primary); text-transform:uppercase; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+         <span>🙏 Dasvandh (10%)</span>
+         <span style="font-size:10px; color:var(--text-mut);">Gross: ₹${allTimeGross.toLocaleString("en-IN")}</span>
+       </div>
+       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
+          <span style="color:var(--text-mut); font-weight:600;">Today's Cut</span>
+          <span style="font-weight:800; color:var(--text-main);">₹${Math.floor(todayCut).toLocaleString("en-IN")}</span>
+       </div>
+       <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px;">
+          <span style="color:var(--text-mut); font-weight:600;">This Month's Cut</span>
+          <span style="font-weight:800; color:var(--text-main);">₹${Math.floor(monthCut).toLocaleString("en-IN")}</span>
+       </div>
+       <div style="border-top:1px dashed rgba(37,99,235,0.2); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-mut);">RUNNING BALANCE OWED</div>
+            <div style="font-size:20px; font-weight:900; color:var(--danger);">₹${Math.floor(totalOwed).toLocaleString("en-IN")}</div>
+          </div>
+          <button class="btn-solid" style="width:auto; padding:8px 16px; font-size:13px; border-radius:8px;" onclick="openPartnerPayout()">Settle Up</button>
+       </div>
+    </div>
+  `;
+
+  document.getElementById("mrYear").textContent = `(${VY}-${(VY+1).toString().slice(-2)})`;
+  document.getElementById("mrBody").innerHTML = listHtml + partnerHtml;
+  openMod("mMonthlyReceipts");
+}
+
+function openPartnerPayout() {
+  let allTimeGross = 0;
+  D.students.forEach(s => {
+    if(!s.payments) return;
+    Object.values(s.payments).forEach(p => {
+      allTimeGross += p.amt !== undefined ? p.amt : (p.paid ? s.fee : 0);
+    });
+  });
+  let totalPaidOut = (D.partnerPayouts || []).reduce((sum, p) => sum + p.amt, 0);
+  let totalOwed = (allTimeGross * 0.10) - totalPaidOut;
+  
+  document.getElementById("ppAmt").value = totalOwed > 0 ? Math.floor(totalOwed) : 0;
+  closeMod('mMonthlyReceipts'); // close the behind modal
+  openMod('mPartnerPayout');
+}
+
+function savePartnerPayout() {
+  let amt = parseInt(document.getElementById("ppAmt").value) || 0;
+  if(amt <= 0) return;
+  if(!D.partnerPayouts) D.partnerPayouts = [];
+  D.partnerPayouts.push({ amt: amt, date: Date.now() });
+  save();
+  closeMod('mPartnerPayout');
+  openReceiptsModal(); // Pop it back open to see the cleared balance
 }
 
 function renderYTabs(){ document.getElementById("ytabs").innerHTML = [CY-1, CY, CY+1].map(y => `<button class="ytab${VY===y?" on":""}" onclick="VY=${y};renderAll()">${y}-${(y+1).toString().slice(-2)}</button>`).join(""); }
@@ -1125,12 +1304,14 @@ function openSettings() {
   document.getElementById("sName").value = D.cfg.name; 
   document.getElementById("sLoc").value = D.cfg.loc; 
   document.getElementById("sQr").value = D.cfg.qr || "https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png";
+  document.getElementById("sShowNet").checked = !!D.cfg.showNet;
   openMod("mSettings"); 
 }
 function saveSettings() { 
   D.cfg.name = document.getElementById("sName").value.trim() || "Tushar Tuition Classes"; 
   D.cfg.loc = document.getElementById("sLoc").value.trim(); 
   D.cfg.qr = document.getElementById("sQr").value.trim() || "https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png";
+  D.cfg.showNet = document.getElementById("sShowNet").checked;
   save(); 
   reloadQR();
   closeMod("mSettings"); 

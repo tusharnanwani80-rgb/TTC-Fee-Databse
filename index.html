@@ -173,6 +173,7 @@ canvas { display: none; }
 </head>
 <body>
 
+<!-- SVGs -->
 <svg style="display:none;">
   <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
   <symbol id="ico-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></symbol>
@@ -215,6 +216,7 @@ canvas { display: none; }
   <div class="stu-list" id="stuList"></div>
 </main>
 
+<!-- Modals -->
 <div class="mbg" id="mMonthlyReceipts">
   <div class="mbox" style="max-width: 400px;">
     <div class="m-hdr"><div class="m-title">Monthly Receipts <span id="mrYear" style="font-size:14px; color:var(--text-mut); margin-left:8px; font-weight:600;"></span></div><button class="btn-close" onclick="closeMod('mMonthlyReceipts')"><svg><use href="#ico-close"></use></svg></button></div>
@@ -233,6 +235,20 @@ canvas { display: none; }
        </div>
     </div>
     <button class="btn-solid" onclick="savePartnerPayout()">Record Dasvandh</button>
+  </div>
+</div>
+
+<div class="mbg" id="mAddDasvandh">
+  <div class="mbox" style="max-width: 400px;">
+    <div class="m-hdr"><div class="m-title">Add Manual Dasvandh</div><button class="btn-close" onclick="closeMod('mAddDasvandh')"><svg><use href="#ico-close"></use></svg></button></div>
+    <div class="pay-amt" style="margin-bottom:16px;">
+       <span style="font-size:12px; font-weight:700; color:var(--text-mut); text-transform:uppercase; letter-spacing:0.5px;">Extra Amount</span>
+       <div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:4px;">
+          <span style="font-size:36px; font-weight:800; color:var(--primary);">₹</span>
+          <input type="number" id="mdAmt" class="amt-input" value="0">
+       </div>
+    </div>
+    <button class="btn-solid" onclick="saveManualDasvandh()">Save Addition</button>
   </div>
 </div>
 
@@ -321,7 +337,7 @@ let VY=CY, selMode="cash";
 let activePayMonths = [];
 let activeRemMonths = [];
 let viewFilter = 'all'; // GODMODE FILTER STATE
-let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra", qr:"https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png", showNet:false}, students:[], partnerPayouts:[]};
+let D={cfg:{name:"Tushar Tuition Classes", loc:"Wardha, Maharashtra", qr:"https://i.ibb.co/BHVNQ22b/IMG-20260424-115527.png", showNet:false}, students:[], partnerPayouts:[], ghostPayments:[], dasvandhManual:[]};
 
 // --- PRELOAD IMAGES SAFELY ---
 let IMG_LOGO = null, IMG_QR = null;
@@ -361,6 +377,8 @@ function hideSync() { setTimeout(() => syncBadge.classList.remove('show'), 2000)
 async function load() {
   try { const s = localStorage.getItem("ttc_db_cloud_fy"); if(s) D = JSON.parse(s); } catch(e){}
   if(!D.partnerPayouts) D.partnerPayouts = [];
+  if(!D.ghostPayments) D.ghostPayments = [];
+  if(!D.dasvandhManual) D.dasvandhManual = [];
   reloadQR();
   renderAll();
   if(DB_URL) {
@@ -370,6 +388,8 @@ async function load() {
       if(json && json.students) { 
           D = json; 
           if(!D.partnerPayouts) D.partnerPayouts = [];
+          if(!D.ghostPayments) D.ghostPayments = [];
+          if(!D.dasvandhManual) D.dasvandhManual = [];
           localStorage.setItem("ttc_db_cloud_fy", JSON.stringify(D)); 
           reloadQR(); 
           renderAll(); 
@@ -552,6 +572,29 @@ function renderStats() {
     }
   });
 
+  // ADD IN GHOST PAYMENTS TO GLOBAL STATS SO DELETED MONEY ISN'T LOST
+  (D.ghostPayments || []).forEach(p => {
+      let fy, fm;
+      if(p.date) {
+        let d = new Date(p.date);
+        let m = d.getMonth();
+        let y = d.getFullYear();
+        fy = m < 3 ? y - 1 : y;
+        fm = (m + 9) % 12;
+      } else if (p.k) {
+        let parts = p.k.split('-');
+        fy = parseInt(parts[0]);
+        fm = parseInt(parts[1]);
+      }
+      if (fy === CY) pTotalYear += p.amt;
+      
+      if (p.date && p.date.startsWith(currentCalMonthStr)) {
+        pThisMonthCash += p.amt;
+      } else if (!p.date && fy === CY && fm === CM) {
+        pThisMonthCash += p.amt;
+      }
+  });
+
   // OPTION 4: NET REVENUE TOGGLE MATH
   let mult = D.cfg.showNet ? 0.9 : 1;
   let netTxt = D.cfg.showNet ? " (Net)" : "";
@@ -566,7 +609,7 @@ function renderStats() {
   `;
 }
 
-// OPTION 1 & 3: PARTNER SHADOW LEDGER
+// OPTION 1 & 3: DASVANDH SHADOW LEDGER
 function openReceiptsModal() {
   let monthlyCollections = Array(12).fill(0);
   let totalYr = 0;
@@ -580,6 +623,7 @@ function openReceiptsModal() {
   let localM = String(NOW.getMonth() + 1).padStart(2, '0');
   let currentCalMonthStr = `${localY}-${localM}`;
 
+  // Tally from active students
   D.students.forEach(s => {
     if(!s.payments) return;
     Object.entries(s.payments).forEach(([k, p]) => {
@@ -603,12 +647,37 @@ function openReceiptsModal() {
          totalYr += amt;
       }
 
-      // Partner Math (Global)
       allTimeGross += amt;
       if (p.date === todayStr) todayGross += amt;
       if (p.date && p.date.startsWith(currentCalMonthStr)) calMonthGross += amt;
       else if (!p.date && fy === CY && fm === CM) calMonthGross += amt;
     });
+  });
+
+  // Tally from deleted students (Ghost Ledger)
+  (D.ghostPayments || []).forEach(p => {
+      let fy, fm;
+      if(p.date) {
+         let d = new Date(p.date);
+         let m = d.getMonth();
+         let y = d.getFullYear();
+         fy = m < 3 ? y - 1 : y;
+         fm = (m + 9) % 12;
+      } else if (p.k) {
+         let parts = p.k.split('-');
+         fy = parseInt(parts[0]);
+         fm = parseInt(parts[1]);
+      }
+
+      if(fy === VY) {
+         monthlyCollections[fm] += p.amt;
+         totalYr += p.amt;
+      }
+
+      allTimeGross += p.amt;
+      if (p.date === todayStr) todayGross += p.amt;
+      if (p.date && p.date.startsWith(currentCalMonthStr)) calMonthGross += p.amt;
+      else if (!p.date && fy === CY && fm === CM) calMonthGross += p.amt;
   });
 
   let listHtml = `<div class="mr-list">`;
@@ -620,9 +689,12 @@ function openReceiptsModal() {
     <div>Total FY Receipts</div><div style="color:var(--success);">₹${totalYr.toLocaleString("en-IN")}</div>
   </div>`;
 
-  // Partner Split Logic (10%)
+  // Dasvandh Split Logic (10%) & Karma Injector
   let totalPaidOut = (D.partnerPayouts || []).reduce((sum, p) => sum + p.amt, 0);
-  let totalOwed = (allTimeGross * 0.10) - totalPaidOut;
+  let totalManual = (D.dasvandhManual || []).reduce((sum, p) => sum + p.amt, 0);
+  
+  let baseCut = allTimeGross * 0.10;
+  let totalOwed = baseCut + totalManual - totalPaidOut;
   let todayCut = todayGross * 0.10;
   let monthCut = calMonthGross * 0.10;
 
@@ -630,19 +702,33 @@ function openReceiptsModal() {
     <div style="margin-top:24px; padding:16px; background:var(--primary-light); border:1px solid rgba(37,99,235,0.2); border-radius:16px;">
        <div style="font-size:12px; font-weight:800; color:var(--primary); text-transform:uppercase; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
          <span>🙏 Dasvandh (10%)</span>
-         <span style="font-size:10px; color:var(--text-mut);">Gross: ₹${allTimeGross.toLocaleString("en-IN")}</span>
+         <button style="background:var(--primary); color:white; border:none; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" onclick="openAddDasvandh()">+ Add Extra</button>
        </div>
-       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
-          <span style="color:var(--text-mut); font-weight:600;">Today's Cut</span>
-          <span style="font-weight:800; color:var(--text-main);">₹${Math.floor(todayCut).toLocaleString("en-IN")}</span>
+       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
+         <div style="background:var(--surface); padding:8px; border-radius:8px; border:1px solid rgba(37,99,235,0.1);">
+           <div style="font-size:10px; color:var(--text-mut); font-weight:700; text-transform:uppercase;">Today's Cut</div>
+           <div style="font-size:14px; font-weight:800; color:var(--text-main);">₹${Math.floor(todayCut).toLocaleString("en-IN")}</div>
+         </div>
+         <div style="background:var(--surface); padding:8px; border-radius:8px; border:1px solid rgba(37,99,235,0.1);">
+           <div style="font-size:10px; color:var(--text-mut); font-weight:700; text-transform:uppercase;">Month's Cut</div>
+           <div style="font-size:14px; font-weight:800; color:var(--text-main);">₹${Math.floor(monthCut).toLocaleString("en-IN")}</div>
+         </div>
        </div>
-       <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px;">
-          <span style="color:var(--text-mut); font-weight:600;">This Month's Cut</span>
-          <span style="font-weight:800; color:var(--text-main);">₹${Math.floor(monthCut).toLocaleString("en-IN")}</span>
+       <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+          <span style="color:var(--text-mut); font-weight:600;">Gross Cut (All-Time)</span>
+          <span style="font-weight:800; color:var(--text-main);">₹${Math.floor(baseCut).toLocaleString("en-IN")}</span>
+       </div>
+       <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+          <span style="color:var(--text-mut); font-weight:600;">Manual Additions</span>
+          <span style="font-weight:800; color:var(--text-main);">+ ₹${totalManual.toLocaleString("en-IN")}</span>
+       </div>
+       <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:13px;">
+          <span style="color:var(--text-mut); font-weight:600;">Total Paid Out</span>
+          <span style="font-weight:800; color:var(--success);">- ₹${totalPaidOut.toLocaleString("en-IN")}</span>
        </div>
        <div style="border-top:1px dashed rgba(37,99,235,0.2); padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <div style="font-size:11px; font-weight:700; color:var(--text-mut);">RUNNING BALANCE OWED</div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-mut);">TOTAL OWED (Inc. Extra)</div>
             <div style="font-size:20px; font-weight:900; color:var(--danger);">₹${Math.floor(totalOwed).toLocaleString("en-IN")}</div>
           </div>
           <button class="btn-solid" style="width:auto; padding:8px 16px; font-size:13px; border-radius:8px;" onclick="openPartnerPayout()">Settle Up</button>
@@ -655,6 +741,22 @@ function openReceiptsModal() {
   openMod("mMonthlyReceipts");
 }
 
+function openAddDasvandh() {
+  document.getElementById("mdAmt").value = "";
+  closeMod('mMonthlyReceipts'); 
+  openMod('mAddDasvandh');
+}
+
+function saveManualDasvandh() {
+  let amt = parseInt(document.getElementById("mdAmt").value) || 0;
+  if(amt <= 0) return;
+  if(!D.dasvandhManual) D.dasvandhManual = [];
+  D.dasvandhManual.push({ amt: amt, date: Date.now() });
+  save();
+  closeMod('mAddDasvandh');
+  openReceiptsModal(); 
+}
+
 function openPartnerPayout() {
   let allTimeGross = 0;
   D.students.forEach(s => {
@@ -663,11 +765,16 @@ function openPartnerPayout() {
       allTimeGross += p.amt !== undefined ? p.amt : (p.paid ? s.fee : 0);
     });
   });
+  (D.ghostPayments || []).forEach(p => {
+      allTimeGross += p.amt;
+  });
+  
+  let totalManual = (D.dasvandhManual || []).reduce((sum, p) => sum + p.amt, 0);
   let totalPaidOut = (D.partnerPayouts || []).reduce((sum, p) => sum + p.amt, 0);
-  let totalOwed = (allTimeGross * 0.10) - totalPaidOut;
+  let totalOwed = (allTimeGross * 0.10) + totalManual - totalPaidOut;
   
   document.getElementById("ppAmt").value = totalOwed > 0 ? Math.floor(totalOwed) : 0;
-  closeMod('mMonthlyReceipts'); // close the behind modal
+  closeMod('mMonthlyReceipts'); 
   openMod('mPartnerPayout');
 }
 
@@ -678,7 +785,7 @@ function savePartnerPayout() {
   D.partnerPayouts.push({ amt: amt, date: Date.now() });
   save();
   closeMod('mPartnerPayout');
-  openReceiptsModal(); // Pop it back open to see the cleared balance
+  openReceiptsModal(); 
 }
 
 function renderYTabs(){ document.getElementById("ytabs").innerHTML = [CY-1, CY, CY+1].map(y => `<button class="ytab${VY===y?" on":""}" onclick="VY=${y};renderAll()">${y}-${(y+1).toString().slice(-2)}</button>`).join(""); }
@@ -1299,7 +1406,25 @@ function saveStudent() {
   if(id){ Object.assign(stu(id),{name,cls,fee,phone,due,joinY,joinM}); } else { D.students.push({id:uid(),name,cls,fee,phone,due,joinY,joinM,payments:{}}); }
   save(); closeMod("mAdd"); renderAll();
 }
-function delStu(id) { closeMod("mStudentDetails"); if(!confirm(`Delete ${stu(id).name}? This cannot be undone.`)) return; D.students = D.students.filter(s=>s.id!==id); save(); renderAll(); }
+function delStu(id) { 
+  closeMod("mStudentDetails"); 
+  const s = stu(id);
+  if(!confirm(`Delete ${s.name}? This cannot be undone.`)) return; 
+  
+  // GHOST LEDGER SIPHON
+  if(s.payments) {
+     if(!D.ghostPayments) D.ghostPayments = [];
+     Object.entries(s.payments).forEach(([k, p]) => {
+        let amt = p.amt !== undefined ? p.amt : (p.paid ? s.fee : 0);
+        if (amt > 0) {
+           D.ghostPayments.push({ amt: amt, date: p.date, k: k });
+        }
+     });
+  }
+  
+  D.students = D.students.filter(x=>x.id!==id); 
+  save(); renderAll(); 
+}
 function openSettings() { 
   document.getElementById("sName").value = D.cfg.name; 
   document.getElementById("sLoc").value = D.cfg.loc; 

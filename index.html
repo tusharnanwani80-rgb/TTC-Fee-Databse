@@ -290,6 +290,12 @@ canvas { display: none; }
   <div class="mbox">
     <div class="m-hdr"><div class="m-title" id="addTitle">Add Student</div><button class="btn-close" onclick="closeMod('mAdd')"><svg><use href="#ico-close"></use></svg></button></div>
     <input type="hidden" id="eId">
+    
+    <button type="button" id="btnImportContact" class="btn-outline" style="margin-top: 0; margin-bottom: 16px; padding: 12px; color: var(--primary); border-color: rgba(37,99,235,0.3); background: var(--primary-light); font-size: 14px; display: none;" onclick="importContact()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; margin-right:8px; vertical-align:-4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      Import from Phone Contacts
+    </button>
+
     <div class="fld"><label>Full Name</label><input id="eName" placeholder="e.g. Aarav Sharma"></div>
     <div class="f-row">
       <div class="fld"><label>Class</label><input id="eCls" placeholder="e.g. 10"></div>
@@ -2236,9 +2242,59 @@ function openAdd() {
   document.getElementById("eJoinY").innerHTML = [CY-1, CY, CY+1].map(y => `<option value="${y}">${y}-${(y+1).toString().slice(-2)}</option>`).join('');
   document.getElementById("eJoinM").innerHTML = MN.map((m, i) => `<option value="${i}">${m}</option>`).join('');
   document.getElementById("eJoinY").value = CY; document.getElementById("eJoinM").value = CM;
+  
+  // Show Contact Picker button ONLY if the mobile device supports it
+  const btnImport = document.getElementById("btnImportContact");
+  if ('contacts' in navigator && 'ContactsManager' in window) {
+    btnImport.style.display = "flex";
+  } else {
+    btnImport.style.display = "none";
+  }
+  
   openMod("mAdd"); 
 }
+// --- NATIVE CONTACT PICKER API ---
+async function importContact() {
+  const props = ['name', 'tel'];
+  const opts = { multiple: false };
 
+  if ('contacts' in navigator && 'ContactsManager' in window) {
+    try {
+      const contacts = await navigator.contacts.select(props, opts);
+      if (contacts.length > 0) {
+        const contact = contacts[0];
+        
+        // 1. Populate the Name
+        if (contact.name && contact.name.length > 0) {
+          document.getElementById("eName").value = contact.name[0];
+        }
+        
+        // 2. Populate and Clean the Phone Number for WhatsApp
+        if (contact.tel && contact.tel.length > 0) {
+          let rawPhone = contact.tel[0];
+          
+          // Strip out all spaces, dashes, and parentheses
+          let cleanPhone = rawPhone.replace(/\D/g, "");
+          
+          // If the number starts with a local '0', remove it
+          if (cleanPhone.startsWith("0")) {
+             cleanPhone = cleanPhone.substring(1);
+          }
+          
+          // If it's a standard 10-digit Indian number without the country code, append '91'
+          if (cleanPhone.length === 10) {
+             cleanPhone = "91" + cleanPhone;
+          }
+          
+          document.getElementById("ePhone").value = cleanPhone;
+        }
+      }
+    } catch (err) {
+      console.log("Contact selection canceled or failed.", err);
+    }
+  }
+}
+  
 function editStu(id) { 
   closeMod("mStudentDetails"); const s=stu(id); 
   document.getElementById("addTitle").textContent="Edit Details"; document.getElementById("eId").value=id; 

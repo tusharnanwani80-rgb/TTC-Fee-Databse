@@ -1,0 +1,50 @@
+{
+  "name": "TTC Fee Ledger",
+  "short_name": "TTC Ledger",
+  "description": "Fee tracking and tuition management for Tushar Tuition Classes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F7FA",
+  "theme_color": "#FFFFFF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-fees.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-fees.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add New Student",
+      "short_name": "Add Student",
+      "description": "Register a new student in the ledger",
+      "url": "/?action=add",
+      "icons": [
+        {
+          "src": "icon-fees.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Search Records",
+      "short_name": "Search",
+      "description": "Search for a student record",
+      "url": "/?action=search",
+      "icons": [
+        {
+          "src": "icon-fees.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
